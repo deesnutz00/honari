@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'profile_screen.dart';
 import 'upload_screen.dart';
 import 'library_screen.dart';
+import 'social_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -25,8 +26,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _screens.addAll([
       _buildHomeScreen(),
       LibraryScreen(),
+      const SocialScreen(),
       const UploadScreen(),
-      const ProfileScreen(), //  Replaced with actual screen
+      const ProfileScreen(),
     ]);
   }
 
@@ -172,6 +174,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.book_outlined),
             label: 'Library',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline), // Message circle icon
+            label: 'Social',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.upload_outlined),

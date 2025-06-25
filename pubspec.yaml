@@ -24,6 +24,10 @@ flutter:
   assets:
     - assets/logo.png
     - assets/user.jpg
+    - assets/book.png
+    - assets/book2.png
+    - assets/book1.jpg
+    - assets/book2.jpg
 
 flutter_icons:
   android: true

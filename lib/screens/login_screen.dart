@@ -23,7 +23,7 @@ class LoginScreen extends StatelessWidget {
                     Text(
                       'Honari 本',
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 30,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF87CEEB),
                       ),
@@ -38,23 +38,32 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 48),
 
-              // Email TextField with soft shadow
+              // Email TextField
               Container(
                 decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 255, 236, 236),
+                  color: const Color(0xFFF5F5F5), // Very light grey background
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.08),
+                      color: const Color(0xFFE0E0E0).withOpacity(0.08),
                       blurRadius: 10,
-                      offset: Offset(0, 4),
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: const TextField(
-                  decoration: InputDecoration(
-                    prefixIcon: Icon(Icons.email_outlined),
+                child: TextField(
+                  style: const TextStyle(
+                    color: Color(0xFF7D7D7D), // Darker grey input text
+                  ),
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(
+                      Icons.email_outlined,
+                      color: Color(0xFF7D7D7D),
+                    ), // Icon color
                     hintText: 'Email address',
+                    hintStyle: TextStyle(
+                      color: Color(0xFF9E9E9E),
+                    ), // Hint text color
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 16,
@@ -63,26 +72,36 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
+
               const SizedBox(height: 16),
 
-              // Password TextField with soft shadow
+              // Password TextField
               Container(
                 decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 255, 236, 236),
+                  color: const Color(0xFFF5F5F5), // Very light grey background
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.08),
+                      color: const Color(0xFFE0E0E0).withOpacity(0.08),
                       blurRadius: 10,
-                      offset: Offset(0, 4),
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: const TextField(
+                child: TextField(
                   obscureText: true,
-                  decoration: InputDecoration(
-                    prefixIcon: Icon(Icons.lock_outline),
+                  style: const TextStyle(
+                    color: Color(0xFF7D7D7D), // Darker grey input text
+                  ),
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(
+                      Icons.lock_outline,
+                      color: Color(0xFF7D7D7D),
+                    ), // Icon color
                     hintText: 'Password',
+                    hintStyle: TextStyle(
+                      color: Color(0xFF9E9E9E),
+                    ), // Hint text color
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 16,
@@ -97,10 +116,17 @@ class LoginScreen extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {},
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color.fromARGB(
+                      255,
+                      135,
+                      206,
+                      235,
+                    ), // Change this to your desired color
+                  ),
                   child: const Text('Forgot password?'),
                 ),
               ),
-              const SizedBox(height: 12),
 
               // Sign In button with soft shadow
               Container(
@@ -126,9 +152,14 @@ class LoginScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+
                     child: const Text(
                       'Sign In',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromARGB(255, 255, 255, 255),
+                      ),
                     ),
                   ),
                 ),
@@ -136,13 +167,18 @@ class LoginScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               Row(
-                children: const [
-                  Expanded(child: Divider()),
-                  Padding(
+                children: [
+                  const Expanded(child: Divider()),
+                  const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Text('or'),
+                    child: Text(
+                      'or',
+                      style: TextStyle(
+                        color: Color(0xFF9E9E9E), // Medium grey
+                      ),
+                    ),
                   ),
-                  Expanded(child: Divider()),
+                  const Expanded(child: Divider()),
                 ],
               ),
               const SizedBox(height: 16),
@@ -171,11 +207,28 @@ class LoginScreen extends StatelessWidget {
                         ),
                       );
                     },
+
                     style: OutlinedButton.styleFrom(
+                      foregroundColor: Color.fromARGB(
+                        255,
+                        135,
+                        206,
+                        235,
+                      ), // Text/icon color
+                      side: BorderSide(
+                        color: Color.fromARGB(
+                          255,
+                          135,
+                          206,
+                          235,
+                        ), // Outline color
+                        width: 1,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+
                     child: const Text('Continue with Google'),
                   ),
                 ),
@@ -192,7 +245,29 @@ class LoginScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  child: const Text("Don't have an account? Sign up"),
+                  child: RichText(
+                    text: TextSpan(
+                      text: "Don't have an account? ",
+                      style: TextStyle(
+                        color: Colors.grey, // First part color
+                        fontSize: 16,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: "Sign up",
+                          style: TextStyle(
+                            color: Color.fromARGB(
+                              255,
+                              135,
+                              206,
+                              235,
+                            ), // Sky blue
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],

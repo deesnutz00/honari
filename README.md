@@ -10,7 +10,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.8-blue?logo=flutter&style=flat-square">
   <img src="https://img.shields.io/badge/Firebase-Backend-yellow?logo=firebase&style=flat-square">
-  <img src="https://img.shields.io/badge/License-MIT-blueviolet?style=flat-square">
+  
 </p>
 
 ---

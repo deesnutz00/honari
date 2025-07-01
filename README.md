@@ -20,7 +20,9 @@
 **Honari 本** is a book-sharing and reading community app designed for simplicity and beauty.  
 From effortlessly lending digital books to sharing quotes, reviews, and reading playlists — Honari brings readers closer with every tap.
 
-🎨 Inspired by sakura pink and sky blue aesthetics, the design is soft, clean, and joyful.
+🎨 Design Features  
+...  
+*You might think the colors were inspired by nature — but really, they remind me of someone.* 🌸
 
 ---
 

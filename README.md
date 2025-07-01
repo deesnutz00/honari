@@ -22,7 +22,7 @@ From effortlessly lending digital books to sharing quotes, reviews, and reading 
 
 🎨 Design Features  
 ...  
-*You might think the colors were inspired by nature — but really, they remind me of someone.* 🌸
+*You may think the pink represents cherry blossoms and the sky blue represents the sky.....but really, they remind me of someone.* 🌸
 
 ---
 

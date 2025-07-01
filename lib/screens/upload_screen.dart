@@ -118,7 +118,14 @@ class _UploadScreenState extends State<UploadScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text("Upload Book", style: TextStyle(fontSize: 16)),
+              child: const Text(
+                "Upload Book",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 255, 255, 255),
+                ),
+              ),
             ),
           ],
         ),

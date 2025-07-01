@@ -13,8 +13,11 @@ class SignUpScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.arrow_back),
-              const SizedBox(height: 32),
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.grey),
+                onPressed: () => Navigator.pop(context),
+              ),
+              const SizedBox(height: 16),
               Center(
                 child: Column(
                   children: const [
@@ -35,28 +38,32 @@ class SignUpScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 48),
-              const _SoftTextField(
+
+              // Fields
+              const _GreyTextField(
                 icon: Icons.person_outline,
                 hintText: 'Full name',
               ),
               const SizedBox(height: 16),
-              const _SoftTextField(
+              const _GreyTextField(
                 icon: Icons.email_outlined,
                 hintText: 'Email address',
               ),
               const SizedBox(height: 16),
-              const _SoftTextField(
+              const _GreyTextField(
                 icon: Icons.lock_outline,
                 hintText: 'Password',
                 obscureText: true,
               ),
               const SizedBox(height: 16),
-              const _SoftTextField(
+              const _GreyTextField(
                 icon: Icons.lock_outline,
                 hintText: 'Confirm password',
                 obscureText: true,
               ),
               const SizedBox(height: 24),
+
+              // Sign Up button
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -65,52 +72,69 @@ class SignUpScreen extends StatelessWidget {
                     // Add sign-up logic here
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF87CEEB), // sky blue
+                    backgroundColor: const Color(0xFF87CEEB), // sky blue
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 2,
-                    shadowColor: Colors.grey.withOpacity(0.2),
+                    elevation: 0,
                   ),
-                  child: const Text('Sign Up', style: TextStyle(fontSize: 16)),
+                  child: const Text(
+                    'Sign Up',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
+                  ),
                 ),
               ),
+
               const SizedBox(height: 16),
               Row(
                 children: const [
                   Expanded(child: Divider()),
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Text('or'),
+                    child: Text('or', style: TextStyle(color: Colors.grey)),
                   ),
                   Expanded(child: Divider()),
                 ],
               ),
+
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: OutlinedButton(
                   onPressed: () {},
-                  child: const Text('Continue with Google'),
                   style: OutlinedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    side: BorderSide(
-                      color: Color(0xFFE8D0D0),
-                    ), // sakura soft pink
+                    side: const BorderSide(
+                      color: Color.fromARGB(
+                        255,
+                        135,
+                        206,
+                        235,
+                      ), // Outline color
+                      width: 1,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
+                  child: const Text(
+                    'Continue with Google',
+                    style: TextStyle(color: Color.fromARGB(255, 135, 206, 235)),
+                  ),
                 ),
               ),
+
               const SizedBox(height: 24),
               Center(
                 child: TextButton(
                   onPressed: () {
                     Navigator.pop(context); // Go back to login
                   },
-                  child: const Text("Already have an account? Sign in"),
+                  child: const Text(
+                    "Already have an account? Sign in",
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ),
               ),
             ],
@@ -121,13 +145,13 @@ class SignUpScreen extends StatelessWidget {
   }
 }
 
-// Custom Soft Text Field Widget
-class _SoftTextField extends StatelessWidget {
+// TextField with login-style grey background
+class _GreyTextField extends StatelessWidget {
   final IconData icon;
   final String hintText;
   final bool obscureText;
 
-  const _SoftTextField({
+  const _GreyTextField({
     Key? key,
     required this.icon,
     required this.hintText,
@@ -138,11 +162,13 @@ class _SoftTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       obscureText: obscureText,
+      style: const TextStyle(color: Colors.black87),
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Colors.grey),
         hintText: hintText,
+        hintStyle: const TextStyle(color: Colors.grey),
         filled: true,
-        fillColor: Color(0xFFFDF6F6), // very soft sakura tone
+        fillColor: Color(0xFFF1F1F1), // Light grey background
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

@@ -66,7 +66,7 @@ It’s like Spotify + Goodreads — but cleaner, faster, and beautiful.
 ## 🚀 Getting Started
 
 ```bash
-git clone https://github.com/yourusername/honari.git
+git clone https://github.com/deesnutz00/honari.git
 cd honari
 flutter pub get
 flutter run

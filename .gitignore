@@ -1,0 +1,61 @@
+# Flutter build
+build/
+.android/
+.ios/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-versions
+.dart_tool/
+.packages
+.melos_tool/
+
+# Output files (prevent large file errors)
+*.apk
+*.aab
+*.so
+*.dill
+*.snap
+*.tmp
+*.log
+
+# Android specific
+android/app/build/
+android/.gradle/
+*.keystore
+
+# iOS specific
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Generated.xcconfig
+ios/Pods/
+ios/Runner.xcworkspace/
+ios/build/
+
+# Xcode
+*.xcodeproj/*
+*.xcworkspace/
+*.xcuserstate
+*.xcuserdatad
+DerivedData/
+
+# macOS specific
+macos/Flutter/ephemeral/
+macos/Pods/
+macos/build/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
+# System
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Others
+pubspec.lock

@@ -1,7 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class SignUpScreen extends StatelessWidget {
+class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
+
+  @override
+  State<SignUpScreen> createState() => _SignUpScreenState();
+}
+
+class _SignUpScreenState extends State<SignUpScreen> {
+  final nameController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+
+  bool isLoading = false;
+
+  void signUp() async {
+    final name = nameController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+    final confirmPassword = confirmPasswordController.text;
+
+    if (name.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
+      showMessage('Please fill in all fields');
+      return;
+    }
+
+    if (password != confirmPassword) {
+      showMessage('Passwords do not match');
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final response = await Supabase.instance.client.auth.signUp(
+        email: email,
+        password: password,
+        data: {'name': name},
+      );
+
+      if (response.user != null) {
+        showMessage(
+          'Account created! Please check your email for confirmation.',
+        );
+        Navigator.pop(context); // Go back to login
+      } else {
+        showMessage('Failed to create account');
+      }
+    } on AuthException catch (e) {
+      showMessage(e.message);
+    } catch (e) {
+      showMessage('Unexpected error: $e');
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white), // Text color
+        ),
+        backgroundColor: const Color(0xFFFFB6C1), // Sakura pink
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +99,7 @@ class SignUpScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF87CEEB), // sky blue
+                        color: Color(0xFF87CEEB),
                       ),
                     ),
                     SizedBox(height: 8),
@@ -39,24 +112,28 @@ class SignUpScreen extends StatelessWidget {
               ),
               const SizedBox(height: 48),
 
-              // Fields
-              const _GreyTextField(
+              // TextFields
+              _GreyTextField(
+                controller: nameController,
                 icon: Icons.person_outline,
                 hintText: 'Full name',
               ),
               const SizedBox(height: 16),
-              const _GreyTextField(
+              _GreyTextField(
+                controller: emailController,
                 icon: Icons.email_outlined,
                 hintText: 'Email address',
               ),
               const SizedBox(height: 16),
-              const _GreyTextField(
+              _GreyTextField(
+                controller: passwordController,
                 icon: Icons.lock_outline,
                 hintText: 'Password',
                 obscureText: true,
               ),
               const SizedBox(height: 16),
-              const _GreyTextField(
+              _GreyTextField(
+                controller: confirmPasswordController,
                 icon: Icons.lock_outline,
                 hintText: 'Confirm password',
                 obscureText: true,
@@ -68,20 +145,20 @@ class SignUpScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Add sign-up logic here
-                  },
+                  onPressed: isLoading ? null : signUp,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF87CEEB), // sky blue
+                    backgroundColor: const Color(0xFF87CEEB),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Sign Up',
-                    style: TextStyle(fontSize: 16, color: Colors.white),
-                  ),
+                  child: isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Sign Up',
+                          style: TextStyle(fontSize: 16, color: Colors.white),
+                        ),
                 ),
               ),
 
@@ -102,25 +179,19 @@ class SignUpScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 48,
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    showMessage("Google login not implemented yet");
+                  },
                   style: OutlinedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    side: const BorderSide(
-                      color: Color.fromARGB(
-                        255,
-                        135,
-                        206,
-                        235,
-                      ), // Outline color
-                      width: 1,
-                    ),
+                    side: const BorderSide(color: Color(0xFF87CEEB), width: 1),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: const Text(
                     'Continue with Google',
-                    style: TextStyle(color: Color.fromARGB(255, 135, 206, 235)),
+                    style: TextStyle(color: Color(0xFF87CEEB)),
                   ),
                 ),
               ),
@@ -128,9 +199,7 @@ class SignUpScreen extends StatelessWidget {
               const SizedBox(height: 24),
               Center(
                 child: TextButton(
-                  onPressed: () {
-                    Navigator.pop(context); // Go back to login
-                  },
+                  onPressed: () => Navigator.pop(context),
                   child: const Text(
                     "Already have an account? Sign in",
                     style: TextStyle(color: Colors.grey),
@@ -145,22 +214,25 @@ class SignUpScreen extends StatelessWidget {
   }
 }
 
-// TextField with login-style grey background
+// Custom TextField with controller
 class _GreyTextField extends StatelessWidget {
   final IconData icon;
   final String hintText;
   final bool obscureText;
+  final TextEditingController controller;
 
   const _GreyTextField({
     Key? key,
     required this.icon,
     required this.hintText,
+    required this.controller,
     this.obscureText = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: controller,
       obscureText: obscureText,
       style: const TextStyle(color: Colors.black87),
       decoration: InputDecoration(
@@ -168,7 +240,7 @@ class _GreyTextField extends StatelessWidget {
         hintText: hintText,
         hintStyle: const TextStyle(color: Colors.grey),
         filled: true,
-        fillColor: Color(0xFFF1F1F1), // Light grey background
+        fillColor: Color(0xFFF1F1F1),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

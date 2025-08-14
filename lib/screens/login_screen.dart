@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'signup_screen.dart';
 import 'dashboard_screen.dart';
+import 'forgot_password.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,36 +18,49 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
 
   void _signIn() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    // Show snack bar if email or password is empty
+    if (email.isEmpty || password.isEmpty) {
+      _showSnackBar("Please enter both email and password.");
+      return;
+    }
+
     setState(() => _loading = true);
     try {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
-
       final response = await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
       if (response.user != null) {
-        // Login success, go to Dashboard
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const DashboardScreen()),
         );
       } else {
-        _showError("Invalid login credentials.");
+        _showSnackBar("Invalid login credentials.");
       }
     } catch (e) {
-      _showError(e.toString());
+      _showSnackBar(e.toString());
     } finally {
       setState(() => _loading = false);
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+  void _showSnackBar(String message) {
+    final snackBar = SnackBar(
+      content: Text(message, style: const TextStyle(color: Colors.white)),
+      backgroundColor: const Color(0xFF87CEEB),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
     );
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
   }
 
   @override
@@ -82,17 +96,13 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 48),
 
-              // Email TextField
               _buildInputField(
                 controller: _emailController,
                 hintText: 'Email address',
                 icon: Icons.email_outlined,
                 obscureText: false,
               ),
-
               const SizedBox(height: 16),
-
-              // Password TextField
               _buildInputField(
                 controller: _passwordController,
                 hintText: 'Password',
@@ -104,7 +114,14 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordScreen(),
+                      ),
+                    );
+                  },
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF87CEEB),
                   ),
@@ -112,7 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              // Sign In button
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),

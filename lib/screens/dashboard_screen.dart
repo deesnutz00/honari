@@ -3,6 +3,8 @@ import 'profile_screen.dart';
 import 'upload_screen.dart';
 import 'library_screen.dart';
 import 'social_screen.dart';
+import 'book_details.dart';
+import 'package:honari/widgets/book_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -19,7 +21,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final List<Widget> _screens = [];
 
-  @override
   @override
   void initState() {
     super.initState();
@@ -45,28 +46,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildSection("Trending Now"),
-          _buildHorizontalList(),
+          _buildPlaceholderList("trending"),
 
           const SizedBox(height: 16),
           _buildSection("Recommendations from Friends"),
-          _buildHorizontalList(),
+          _buildPlaceholderList("recommendations"),
 
           const SizedBox(height: 16),
           _buildSection("Recently Opened"),
-          _buildHorizontalList(),
+          _buildPlaceholderList("recent"),
 
           const SizedBox(height: 32),
-          Center(
-            child: Text(
-              '“Sunset found her squatting in the grass, groaning. Every stool was looser than the one before, and smelled fouler. By the time the moon came up, she was shitting brown water. The more she drank the more she shat, but the more she shat, the thirstier she grew.” \n— George R.R. Martin',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontStyle: FontStyle.italic,
-                fontSize: 14,
-              ),
-            ),
-          ),
+          _buildDailyQuote(),
           const SizedBox(height: 24),
         ],
       ),
@@ -87,38 +78,173 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildHorizontalList() {
+  Widget _buildPlaceholderList(String type) {
     return SizedBox(
-      height: 160,
-      child: ListView.builder(
+      height: 220,
+      child: ListView(
         scrollDirection: Axis.horizontal,
-        itemCount: 6,
-        itemBuilder: (context, index) {
-          return Container(
-            width: 120,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              color: sakuraPink,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.white,
-                  blurRadius: 8,
-                  offset: const Offset(2, 4),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                "Book ${index + 1}",
-                style: const TextStyle(color: Colors.black87),
-              ),
-            ),
-          );
-        },
+        children: List.generate(
+          3,
+          (index) => _buildPlaceholderBookCard(type, index),
+        ),
       ),
     );
   }
+
+  Widget _buildPlaceholderBookCard(String type, int index) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Replace with actual book data from database when ready
+        // For now, navigate to book details with placeholder data
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookDetailPage(
+              title: type == "trending"
+                  ? "Trending Book"
+                  : type == "recommendations"
+                  ? "Friend's Pick"
+                  : "Recent Book",
+              author: "Author Name",
+              genre: "Genre",
+              pages: 300,
+              year: 2024,
+              rating: 4.5,
+              reviews: 100,
+              coverUrl:
+                  "", // Empty string will show placeholder in BookDetailPage
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 180,
+              width: 140,
+              decoration: BoxDecoration(
+                color: skyBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: skyBlue.withOpacity(0.3), width: 1),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.book, size: 40, color: skyBlue.withOpacity(0.6)),
+                  const SizedBox(height: 8),
+                  Text(
+                    type == "trending"
+                        ? "Trending\nBook"
+                        : type == "recommendations"
+                        ? "Friend's\nPick"
+                        : "Recent\nBook",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: skyBlue.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              height: 16,
+              width: 120,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              height: 12,
+              width: 80,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDailyQuote() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: sakuraPink.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: sakuraPink.withOpacity(0.3), width: 1),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.format_quote,
+                color: sakuraPink.withOpacity(0.7),
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Daily Quote",
+                style: TextStyle(
+                  color: sakuraPink.withOpacity(0.8),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            "Replace this with dynamic quotes from your database when ready.",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "— Honari",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: sakuraPink.withOpacity(0.7),
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // TODO: Replace this method when you add database functionality
+  // Widget _buildHorizontalList() {
+  //   return SizedBox(
+  //     height: 220,
+  //     child: ListView(
+  //       scrollDirection: Axis.horizontal,
+  //       children: [
+  //         // Replace with dynamic data from your database
+  //         // Example: books.map((book) => BookCard(book: book)).toList()
+  //       ],
+  //     ),
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -142,11 +268,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               children: [
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    // TODO: Implement search functionality
+                  },
                   icon: const Icon(Icons.search, color: Colors.grey),
                 ),
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    // TODO: Implement notifications functionality
+                  },
                   icon: const Icon(
                     Icons.notifications_none,
                     color: Colors.grey,

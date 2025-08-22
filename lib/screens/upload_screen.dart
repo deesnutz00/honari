@@ -1,5 +1,6 @@
-// import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:dotted_border/dotted_border.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
@@ -10,6 +11,7 @@ class UploadScreen extends StatefulWidget {
 
 class _UploadScreenState extends State<UploadScreen> {
   String? fileName;
+  FilePickerResult? pickedFile;
 
   final TextEditingController titleController = TextEditingController();
   final TextEditingController authorController = TextEditingController();
@@ -23,17 +25,30 @@ class _UploadScreenState extends State<UploadScreen> {
     borderSide: BorderSide.none,
   );
 
-  // Future<void> pickPDF() async {
-  //   final result = await FilePicker.platform.pickFiles(
-  //     type: FileType.custom,
-  //     allowedExtensions: ['pdf'],
-  //   );
-  //   if (result != null && result.files.isNotEmpty) {
-  //     setState(() {
-  //       fileName = result.files.first.name;
-  //     });
-  //   }
-  // }
+  Future<void> pickPDF() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          pickedFile = result;
+          fileName = result.files.first.name;
+        });
+      }
+    } catch (e) {
+      // Handle any errors that might occur during file picking
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking file: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,14 +74,49 @@ class _UploadScreenState extends State<UploadScreen> {
             ),
             const SizedBox(height: 20),
             GestureDetector(
-              //onTap: pickPDF,
-              child: DottedBorderContainer(
-                child: Center(
-                  child: Text(
-                    fileName ?? 'Tap to select PDF file',
-                    style: TextStyle(
-                      color: fileName != null ? Colors.black : Colors.grey,
-                      fontWeight: FontWeight.w500,
+              onTap: pickPDF,
+              child: DottedBorder(
+                borderType: BorderType.RRect,
+                radius: const Radius.circular(12),
+                color: const Color(0xFF87CEEB),
+                strokeWidth: 1.5,
+                dashPattern: const [8, 4],
+                child: Container(
+                  height: 120,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFFF5F5F5),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          fileName != null
+                              ? Icons.file_present
+                              : Icons.file_upload_outlined,
+                          size: 32,
+                          color: fileName != null ? Colors.green : Colors.grey,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          fileName ?? 'Tap to select PDF file',
+                          style: TextStyle(
+                            color: fileName != null
+                                ? Colors.black
+                                : Colors.grey,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (fileName != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'PDF file selected',
+                            style: TextStyle(color: Colors.green, fontSize: 12),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
@@ -108,11 +158,30 @@ class _UploadScreenState extends State<UploadScreen> {
             ),
             const SizedBox(height: 32),
             ElevatedButton(
-              onPressed: () {
-                // Handle upload logic
-              },
+              onPressed: pickedFile != null
+                  ? () {
+                      // Handle upload logic
+                      if (titleController.text.isNotEmpty &&
+                          authorController.text.isNotEmpty) {
+                        // TODO: Implement actual upload logic
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Upload functionality coming soon!'),
+                            backgroundColor: Colors.blue,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please fill in all required fields'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
+                  : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: skyBlue,
+                backgroundColor: pickedFile != null ? skyBlue : Colors.grey,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -123,7 +192,7 @@ class _UploadScreenState extends State<UploadScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 255, 255, 255),
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -152,28 +221,6 @@ class _UploadScreenState extends State<UploadScreen> {
         enabledBorder: inputBorder,
         focusedBorder: inputBorder,
       ),
-    );
-  }
-}
-
-class DottedBorderContainer extends StatelessWidget {
-  final Widget child;
-  const DottedBorderContainer({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 120,
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: const Color(0xFF87CEEB),
-          style: BorderStyle.solid,
-          width: 1.5,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        color: const Color(0xFFF5F5F5),
-      ),
-      child: child,
     );
   }
 }

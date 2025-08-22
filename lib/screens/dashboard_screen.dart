@@ -19,24 +19,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final Color skyBlue = const Color(0xFF87CEEB);
   final Color sakuraPink = const Color(0xFFFCE4EC);
 
-  final List<Widget> _screens = [];
+  // Remove the _screens list initialization from initState
+  // We'll build screens on-demand to prevent memory issues
 
   @override
   void initState() {
     super.initState();
-    _screens.addAll([
-      _buildHomeScreen(),
-      LibraryScreen(),
-      const SocialScreen(),
-      const UploadScreen(),
-      const ProfileScreen(),
-    ]);
+    // Removed _screens initialization to prevent memory issues
   }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  // Helper method to get the current screen
+  Widget _getCurrentScreen() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildHomeScreen();
+      case 1:
+        return LibraryScreen();
+      case 2:
+        return const SocialScreen();
+      case 3:
+        return const UploadScreen();
+      case 4:
+        return const ProfileScreen();
+      default:
+        return _buildHomeScreen();
+    }
   }
 
   Widget _buildHomeScreen() {
@@ -94,28 +107,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildPlaceholderBookCard(String type, int index) {
     return GestureDetector(
       onTap: () {
-        // TODO: Replace with actual book data from database when ready
-        // For now, navigate to book details with placeholder data
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BookDetailPage(
-              title: type == "trending"
-                  ? "Trending Book"
-                  : type == "recommendations"
-                  ? "Friend's Pick"
-                  : "Recent Book",
-              author: "Author Name",
-              genre: "Genre",
-              pages: 300,
-              year: 2024,
-              rating: 4.5,
-              reviews: 100,
-              coverUrl:
-                  "", // Empty string will show placeholder in BookDetailPage
+        try {
+          // TODO: Replace with actual book data from database when ready
+          // For now, navigate to book details with placeholder data
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BookDetailPage(
+                title: type == "trending"
+                    ? "Trending Book"
+                    : type == "recommendations"
+                    ? "Friend's Pick"
+                    : "Recent Book",
+                author: "Author Name",
+                genre: "Genre",
+                pages: 300,
+                year: 2024,
+                rating: 4.5,
+                reviews: 100,
+                coverUrl:
+                    "", // Empty string will show placeholder in BookDetailPage
+              ),
             ),
-          ),
-        );
+          );
+        } catch (e) {
+          // Show error dialog if navigation fails
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error'),
+              content: Text('Failed to open book details: $e'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
       },
       child: Container(
         width: 140,
@@ -287,7 +317,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
-      body: _screens[_selectedIndex],
+      body: Builder(
+        builder: (context) {
+          try {
+            return _getCurrentScreen();
+          } catch (e) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                  const SizedBox(height: 16),
+                  Text('Error loading screen: $e'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        // Force rebuild
+                      });
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+        },
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         type: BottomNavigationBarType.fixed,

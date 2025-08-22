@@ -7,16 +7,28 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Required for async in main
 
-  await Supabase.initialize(
-    url: 'https://yriytuyeamxzcxyqtbgp.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyaXl0dXllYW14emN4eXF0YmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NjM3NDgsImV4cCI6MjA2NzEzOTc0OH0.5Coq1Mhj1BMcDLJchHOjk35N8BASkU3NmHGqckPmWK4', // replace with your anon key
-  );
+  try {
+    // Initialize Supabase with error handling
+    await Supabase.initialize(
+      url: 'https://yriytuyeamxzcxyqtbgp.supabase.co',
+      anonKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyaXl0dXllYW14emN4eXF0YmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NjM3NDgsImV4cCI6MjA2NzEzOTc0OH0.5Coq1Mhj1BMcDLJchHOjk35N8BASkU3NmHGqckPmWK4',
+    );
+  } catch (e) {
+    // If Supabase fails to initialize, we'll still run the app
+    // but without database functionality
+    debugPrint('Supabase initialization failed: $e');
+  }
 
-  final prefs = await SharedPreferences.getInstance();
-  final seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
-
-  runApp(HonariApp(seenOnboarding: seenOnboarding));
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
+    runApp(HonariApp(seenOnboarding: seenOnboarding));
+  } catch (e) {
+    // If SharedPreferences fails, run app with default onboarding
+    debugPrint('SharedPreferences failed: $e');
+    runApp(const HonariApp(seenOnboarding: false));
+  }
 }
 
 class HonariApp extends StatelessWidget {

@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to photo library to select PDF files for book uploads.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs access to camera to capture documents for book uploads.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>This app needs access to documents folder to select PDF files for book uploads.</string>
 </dict>
 </plist>

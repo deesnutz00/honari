@@ -47,6 +47,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  void _goToNextPage() {
+    if (_currentPage < _pages.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _completeOnboarding();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,7 +67,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             alignment: Alignment.topRight,
             child: TextButton(
               onPressed: _completeOnboarding,
-              child: const Text("Skip"),
+              child: const Text(
+                "Skip",
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -112,7 +129,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _currentPage == index
-                      ? Colors.blueAccent
+                      ? const Color(0xFF87CEEB)
                       : Colors.grey.shade300,
                 ),
               ),
@@ -124,16 +141,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton(
-                onPressed: _completeOnboarding,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF87CEEB),
+              child: TextButton(
+                onPressed: _goToNextPage,
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(
+                      color: Color(0xFF87CEEB),
+                      width: 1.5,
+                    ),
                   ),
                 ),
                 child: Text(
                   _currentPage == _pages.length - 1 ? "Get Started" : "Next",
+                  style: const TextStyle(
+                    color: Color(0xFF87CEEB),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),

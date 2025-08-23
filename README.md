@@ -22,7 +22,7 @@ From effortlessly lending digital books to sharing quotes, reviews, and reading 
 
 🎨 Design Features  
 ...  
-*You may think the pink represents cherry blossoms and the sky blue represents the sky.....but really, they just remind me of someone.* 🌸
+*You may think the pink represents cherry blossoms and the sky blue represents the sky.....but really, they just remind me of someone —someone fictional..* 🌸
 
 ---
 

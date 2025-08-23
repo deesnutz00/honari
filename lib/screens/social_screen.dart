@@ -1,13 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/user_model.dart';
+import '../services/user_service.dart';
 
-class SocialScreen extends StatelessWidget {
+class SocialScreen extends StatefulWidget {
   const SocialScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final skyBlue = const Color(0xFF87CEEB);
-    final sakuraPink = const Color(0xFFFCE4EC);
+  State<SocialScreen> createState() => _SocialScreenState();
+}
 
+class _SocialScreenState extends State<SocialScreen> {
+  final skyBlue = const Color(0xFF87CEEB);
+  final lightSkyBlue = const Color(0xFFE0F0FF);
+  
+  List<Map<String, dynamic>> _posts = [];
+  bool _isLoading = true;
+  final UserService _userService = UserService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPosts();
+  }
+
+  Future<void> _loadPosts() async {
+    try {
+      // Mock posts for now - in a real app, you'd fetch from a posts table
+      setState(() {
+        _posts = [
+          {
+            'id': '1',
+            'username': 'deesnutz',
+            'avatar': 'assets/user.jpg',
+            'content': 'Just finished reading "The Art of Living"...',
+            'bookTitle': 'The Art of Living by Haruki Murakami',
+            'bookCover': 'assets/book.png',
+            'type': 'Review',
+            'likes': 24,
+            'comments': 8,
+            'timeAgo': '2 hours ago',
+          },
+          {
+            'id': '2',
+            'username': 'bookworm',
+            'avatar': 'assets/user.jpg',
+            'content': 'Currently reading "1984" and it\'s absolutely mind-blowing!',
+            'bookTitle': '1984 by George Orwell',
+            'bookCover': 'assets/book2.png',
+            'type': 'Currently Reading',
+            'likes': 18,
+            'comments': 5,
+            'timeAgo': '4 hours ago',
+          },
+        ];
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading posts: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -50,19 +108,21 @@ class SocialScreen extends StatelessWidget {
 
           // Post Feed
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: 5, // Mock posts
-              itemBuilder: (context, index) =>
-                  _buildPostCard(skyBlue, sakuraPink),
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _posts.length,
+                    itemBuilder: (context, index) =>
+                        _buildPostCard(_posts[index]),
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPostCard(Color skyBlue, Color sakuraPink) {
+  Widget _buildPostCard(Map<String, dynamic> post) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 10),
       elevation: 2,
@@ -75,18 +135,18 @@ class SocialScreen extends StatelessWidget {
             // User Info
             Row(
               children: [
-                CircleAvatar(backgroundImage: AssetImage('assets/user.jpg')),
+                CircleAvatar(backgroundImage: AssetImage(post['avatar'])),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      "deesnutz",
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      post['username'],
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     Text(
-                      "2 hours ago",
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      post['timeAgo'],
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -97,18 +157,18 @@ class SocialScreen extends StatelessWidget {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: sakuraPink,
+                    color: lightSkyBlue,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text("Review", style: TextStyle(fontSize: 12)),
+                  child: Text(post['type'], style: const TextStyle(fontSize: 12)),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             // Post Content
-            const Text(
-              'Just finished reading "The Art of Living"...',
-              style: TextStyle(fontSize: 14),
+            Text(
+              post['content'],
+              style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 12),
             // Book reference
@@ -121,15 +181,15 @@ class SocialScreen extends StatelessWidget {
               child: Row(
                 children: [
                   Image.asset(
-                    'assets/book.png',
+                    post['bookCover'],
                     height: 40,
                     width: 30,
-                  ), // Placeholder
+                  ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      "The Art of Living by Haruki Murakami",
-                      style: TextStyle(fontSize: 14),
+                      post['bookTitle'],
+                      style: const TextStyle(fontSize: 14),
                     ),
                   ),
                 ],
@@ -138,16 +198,16 @@ class SocialScreen extends StatelessWidget {
             const SizedBox(height: 8),
             // Interaction Bar
             Row(
-              children: const [
-                Icon(Icons.favorite_border, size: 20, color: Colors.grey),
-                SizedBox(width: 4),
-                Text('24'),
-                SizedBox(width: 12),
-                Icon(Icons.chat_bubble_outline, size: 20, color: Colors.grey),
-                SizedBox(width: 4),
-                Text('8'),
-                Spacer(),
-                Icon(Icons.share_outlined, size: 20, color: Colors.grey),
+              children: [
+                const Icon(Icons.favorite_border, size: 20, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text('${post['likes']}'),
+                const SizedBox(width: 12),
+                const Icon(Icons.chat_bubble_outline, size: 20, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text('${post['comments']}'),
+                const Spacer(),
+                const Icon(Icons.share_outlined, size: 20, color: Colors.grey),
               ],
             ),
           ],

@@ -18,6 +18,7 @@ dependencies:
   dotted_border: ^2.1.0
   path_provider: ^2.1.2
   syncfusion_flutter_pdfviewer: ^27.1.55
+  syncfusion_flutter_pdf: ^27.1.55
   archive: ^3.4.10
   image: ^4.1.7
 

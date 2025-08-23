@@ -3,9 +3,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:archive/archive.dart';
 import 'package:image/image.dart' as img;
-import 'dart:io';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../models/local_book_model.dart';
 import '../services/local_book_service.dart';
+import 'package:path/path.dart' as path;
 
 class BookReaderScreen extends StatefulWidget {
   final LocalBookModel book;
@@ -126,8 +127,16 @@ class _BookReaderScreenState extends State<BookReaderScreen> {
     }
   }
 
-  void _updateReadingProgress() {
-    if (_cbzPages.isNotEmpty) {
+  void _updateReadingProgress([int? currentPage, int? totalPages]) {
+    if (currentPage != null && totalPages != null) {
+      // For PDF and other formats that provide page numbers
+      _readingProgress = currentPage / totalPages;
+      widget.localBookService.updateReadingProgress(
+        widget.book.id,
+        _readingProgress,
+      );
+    } else if (_cbzPages.isNotEmpty) {
+      // For CBZ format
       _readingProgress = _currentPage / (_cbzPages.length - 1);
       widget.localBookService.updateReadingProgress(
         widget.book.id,
@@ -215,34 +224,19 @@ class _BookReaderScreenState extends State<BookReaderScreen> {
   }
 
   Widget _buildPdfReader() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.picture_as_pdf,
-            size: 64,
-            color: skyBlue,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'PDF Reader',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'PDF viewing coming soon!',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
+    return SfPdfViewer.file(
+      File(widget.book.filePath),
+      onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+        setState(() {
+          _isLoading = false;
+        });
+      },
+      onPageChanged: (PdfPageChangedDetails details) {
+        // Get total pages from the controller instead since PdfPageChangedDetails doesn't have pageCount
+        final totalPages = widget.book.totalPages ?? 1;
+        _updateReadingProgress(details.newPageNumber, totalPages);
+      },
+      initialPageNumber: widget.book.lastReadPage?.toInt() ?? 1,
     );
   }
 

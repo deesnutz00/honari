@@ -299,12 +299,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           ),
                         )
                       : Expanded(
-                          child: ListView.builder(
-                            itemCount: _localBooks.length,
-                            itemBuilder: (context, index) {
-                              final book = _localBooks[index];
-                              return _buildLocalBookCard(book);
-                            },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: GridView.builder(
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 0.7,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                              ),
+                              itemCount: _localBooks.length,
+                              itemBuilder: (context, index) {
+                                final book = _localBooks[index];
+                                return _buildLocalBookGridCard(book);
+                              },
+                            ),
                           ),
                         ),
                 ],
@@ -363,6 +372,93 @@ class _LibraryScreenState extends State<LibraryScreen> {
             style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
           Text(genre, style: TextStyle(color: skyBlue, fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocalBookGridCard(LocalBookModel book) {
+    return GestureDetector(
+      onTap: () => _openBook(book),
+      onLongPress: () => _showBookOptions(book),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: lightSkyBlue,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: book.coverPath != null
+                        ? Image.file(
+                            File(book.coverPath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: lightSkyBlue,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.book,
+                                    color: skyBlue,
+                                    size: 40,
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: lightSkyBlue,
+                            child: Center(
+                              child: Icon(
+                                Icons.book,
+                                color: skyBlue,
+                                size: 40,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: Text(
+                      book.fileExtension.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            book.title,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -636,13 +732,65 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  void _openBook(LocalBookModel book) {
+  void _openBook(LocalBookModel book) async {
+    // Update last opened time
+    await _localBookService.updateLastOpenedTime(book.id);
+    
+    // Refresh the book list to update the last opened time
+    _loadLocalBooks();
+
+    // Navigate to the book reader screen
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => BookReaderScreen(
           book: book,
           localBookService: _localBookService,
+        ),
+      ),
+    ).then((_) {
+      // Refresh the book list when returning from the reader
+      _loadLocalBooks();
+    });
+  }
+  
+  void _showBookOptions(LocalBookModel book) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.book),
+              title: const Text('Open Book'),
+              onTap: () {
+                Navigator.pop(context);
+                _openBook(book);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text('Share'),
+              onTap: () {
+                 Navigator.pop(context);
+                 // Implement share functionality
+               },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                 Navigator.pop(context);
+                 _showDeleteConfirmation(context, book);
+               },
+            ),
+          ],
         ),
       ),
     );
@@ -655,5 +803,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
         content: Text('Sharing ${book.title}...'),
       ),
     );
+  }
+  
+  void _deleteBook(LocalBookModel book) async {
+    try {
+      await _localBookService.deleteBook(book);
+      setState(() {
+        _loadLocalBooks();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${book.title} deleted'),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting book: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

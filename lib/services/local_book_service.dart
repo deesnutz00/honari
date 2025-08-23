@@ -1,7 +1,12 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import 'package:archive/archive.dart';
 import 'package:image/image.dart' as img;
 import '../models/local_book_model.dart';
@@ -20,16 +25,27 @@ class LocalBookService {
       List<LocalBookModel> books = [];
       for (String bookJson in booksJson) {
         try {
-          final book = LocalBookModel.fromJson(
-            Map<String, dynamic>.from(
-              Map.fromEntries(
-                bookJson.split('|||').map((e) {
-                  final parts = e.split('::');
-                  return MapEntry(parts[0], parts.length > 1 ? parts[1] : '');
-                }),
-              ),
-            ),
-          );
+          final Map<String, dynamic> bookMap = {};
+          final parts = bookJson.split('|||');
+          
+          for (final part in parts) {
+            final keyValue = part.split('::');
+            if (keyValue.length >= 2) {
+              final key = keyValue[0];
+              final value = keyValue[1];
+              
+              // Convert string values to appropriate types
+              if (key == 'fileSizeBytes' || key == 'totalPages') {
+                bookMap[key] = int.tryParse(value) ?? 0;
+              } else if (key == 'readingProgress') {
+                bookMap[key] = double.tryParse(value) ?? 0.0;
+              } else {
+                bookMap[key] = value;
+              }
+            }
+          }
+          
+          final book = LocalBookModel.fromJson(bookMap);
           books.add(book);
         } catch (e) {
           print('Error parsing book: $e');
@@ -158,6 +174,27 @@ class LocalBookService {
       return false;
     } catch (e) {
       print('Error updating reading progress: $e');
+      return false;
+    }
+  }
+
+  // Update last opened time
+  Future<bool> updateLastOpenedTime(String bookId) async {
+    try {
+      final books = await getLocalBooks();
+      final bookIndex = books.indexWhere((b) => b.id == bookId);
+
+      if (bookIndex != -1) {
+        final updatedBook = books[bookIndex].copyWith(
+          lastOpened: DateTime.now(),
+        );
+        books[bookIndex] = updatedBook;
+        await _saveBooks(books);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error updating last opened time: $e');
       return false;
     }
   }
@@ -298,6 +335,8 @@ class LocalBookService {
           return await _extractCbzCover(filePath, coversDir, bookId);
         case 'epub':
           return await _extractEpubCover(filePath, coversDir, bookId);
+        case 'pdf':
+          return await _extractPdfCover(filePath, coversDir, bookId);
         default:
           return null;
       }
@@ -390,6 +429,61 @@ class LocalBookService {
       return null;
     } catch (e) {
       print('Error extracting EPUB cover: $e');
+      return null;
+    }
+  }
+
+  // Extract cover from PDF file
+  Future<String?> _extractPdfCover(
+    String filePath,
+    String coversDir,
+    String bookId,
+  ) async {
+    try {
+      final coverPath = '$coversDir/${bookId}_cover.jpg';
+      
+      // Create a placeholder cover for PDF files
+      // This is a temporary solution until we can properly render PDF pages
+      final canvas = ui.PictureRecorder();
+      final paint = Paint()
+        ..color = Colors.white;
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: 'PDF',
+          style: TextStyle(color: Colors.black, fontSize: 40, fontWeight: FontWeight.bold),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      
+      final pictureCanvas = Canvas(canvas);
+      pictureCanvas.drawRect(Rect.fromLTWH(0, 0, 300, 400), paint);
+      
+      // Draw a PDF icon
+      paint.color = Colors.red;
+      pictureCanvas.drawRect(Rect.fromLTWH(75, 100, 150, 200), paint);
+      
+      // Draw text in the center
+      textPainter.paint(
+        pictureCanvas, 
+        Offset(
+          150 - textPainter.width / 2,
+          200 - textPainter.height / 2,
+        ),
+      );
+      
+      final picture = canvas.endRecording();
+      final img = await picture.toImage(300, 400);
+      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+      
+      if (byteData != null) {
+        await File(coverPath).writeAsBytes(byteData.buffer.asUint8List());
+        return coverPath;
+      }
+      
+      return null;
+    } catch (e) {
+      print('Error extracting PDF cover: $e');
       return null;
     }
   }

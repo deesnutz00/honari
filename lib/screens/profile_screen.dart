@@ -168,17 +168,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildAchievementCard(
-                      '📚 First Book Shared',
+                      '🌸 First Book Shared',
                       'You\'ve uploaded your first book!',
                     ),
                     const SizedBox(height: 12),
                     _buildAchievementCard(
-                      '⭐ Favorite Collector',
+                      '🌸 Favorite Collector',
                       'You\'ve saved over 100 books to your favorites.',
                     ),
                     const SizedBox(height: 12),
                     _buildAchievementCard(
-                      '👥 Community Builder',
+                      '🌸 Community Builder',
                       'You\'re now followed by 200+ readers.',
                     ),
                   ],

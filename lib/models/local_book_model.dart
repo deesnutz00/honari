@@ -52,18 +52,32 @@ class LocalBookModel {
       return 'Yesterday';
     } else if (difference.inDays < 7) {
       return '${difference.inDays} days ago';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return '${weeks} week${weeks == 1 ? '' : 's'} ago';
     } else {
-      final months = (difference.inDays / 30).floor();
-      return '${months} month${months == 1 ? '' : 's'} ago';
+      return '${lastOpened.day}/${lastOpened.month}/${lastOpened.year}';
     }
+  }
+  
+  // Add lastReadPage getter to convert readingProgress to page number
+  int? get lastReadPage {
+    if (readingProgress == null || totalPages == null) return null;
+    return (readingProgress! * totalPages!).round();
   }
 
   bool get isComicBook => fileExtension.toLowerCase() == 'cbz';
 
   factory LocalBookModel.fromJson(Map<String, dynamic> json) {
+    DateTime parseDateTime(String? dateStr) {
+      if (dateStr == null || dateStr.isEmpty) {
+        return DateTime.now();
+      }
+      try {
+        return DateTime.parse(dateStr);
+      } catch (e) {
+        print('Error parsing date: $e');
+        return DateTime.now();
+      }
+    }
+
     return LocalBookModel(
       id: json['id'] ?? '',
       title: json['title'] ?? '',
@@ -72,12 +86,18 @@ class LocalBookModel {
       filePath: json['filePath'] ?? '',
       fileName: json['fileName'] ?? '',
       fileExtension: json['fileExtension'] ?? '',
-      fileSizeBytes: json['fileSizeBytes'] ?? 0,
-      lastOpened: DateTime.parse(json['lastOpened'] ?? DateTime.now().toIso8601String()),
-      addedDate: DateTime.parse(json['addedDate'] ?? DateTime.now().toIso8601String()),
+      fileSizeBytes: json['fileSizeBytes'] is int 
+          ? json['fileSizeBytes'] 
+          : int.tryParse(json['fileSizeBytes']?.toString() ?? '0') ?? 0,
+      lastOpened: parseDateTime(json['lastOpened']),
+      addedDate: parseDateTime(json['addedDate']),
       coverPath: json['coverPath'],
-      totalPages: json['totalPages'],
-      readingProgress: json['readingProgress']?.toDouble(),
+      totalPages: json['totalPages'] is int 
+          ? json['totalPages'] 
+          : int.tryParse(json['totalPages']?.toString() ?? '0'),
+      readingProgress: json['readingProgress'] is double 
+          ? json['readingProgress'] 
+          : double.tryParse(json['readingProgress']?.toString() ?? '0.0'),
     );
   }
 

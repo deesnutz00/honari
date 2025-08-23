@@ -33,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'description':
           'Create custom playlists and organize your reading journey. Keep track of what you love.',
       'icon': Icons.favorite_border,
-      'color': const Color.fromARGB(255, 241, 151, 181),
+      'color': const Color.fromARGB(255, 255, 182, 193),
     },
   ];
 
@@ -61,6 +61,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           Align(
@@ -130,7 +131,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   shape: BoxShape.circle,
                   color: _currentPage == index
                       ? const Color(0xFF87CEEB)
-                      : Colors.grey.shade300,
+                      : const Color.fromARGB(255, 255, 255, 255),
                 ),
               ),
             ),

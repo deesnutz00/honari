@@ -13,6 +13,7 @@ void main() async {
       url: 'https://yriytuyeamxzcxyqtbgp.supabase.co',
       anonKey:
           'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyaXl0dXllYW14emN4eXF0YmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NjM3NDgsImV4cCI6MjA2NzEzOTc0OH0.5Coq1Mhj1BMcDLJchHOjk35N8BASkU3NmHGqckPmWK4',
+      debug: true, // Enable debug mode for better error messages
     );
   } catch (e) {
     // If Supabase fails to initialize, we'll still run the app

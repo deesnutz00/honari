@@ -5,6 +5,7 @@ import 'library_screen.dart';
 import 'social_screen.dart';
 import 'book_details.dart';
 import 'package:honari/widgets/book_card.dart';
+import 'package:honari/widgets/search_overlay.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -15,6 +16,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
+  bool _isSearchVisible = false;
 
   final Color skyBlue = const Color(0xFF87CEEB);
   final Color sakuraPink = const Color(0xFFFCE4EC);
@@ -31,6 +33,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+    });
+  }
+
+  void _showSearch() {
+    setState(() {
+      _isSearchVisible = true;
+    });
+  }
+
+  void _hideSearch() {
+    setState(() {
+      _isSearchVisible = false;
     });
   }
 
@@ -298,9 +312,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               children: [
                 IconButton(
-                  onPressed: () {
-                    // TODO: Implement search functionality
-                  },
+                  onPressed: _showSearch,
                   icon: const Icon(Icons.search, color: Colors.grey),
                 ),
                 IconButton(
@@ -317,32 +329,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
-      body: Builder(
-        builder: (context) {
-          try {
-            return _getCurrentScreen();
-          } catch (e) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                  const SizedBox(height: 16),
-                  Text('Error loading screen: $e'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        // Force rebuild
-                      });
-                    },
-                    child: const Text('Retry'),
+      body: Stack(
+        children: [
+          Builder(
+            builder: (context) {
+              try {
+                return _getCurrentScreen();
+              } catch (e) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Error loading screen: $e'),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            // Force rebuild
+                          });
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            );
-          }
-        },
+                );
+              }
+            },
+          ),
+
+          // Search overlay
+          if (_isSearchVisible) SearchOverlay(onClose: _hideSearch),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,

@@ -13,7 +13,9 @@ class BookService {
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
-      return (response as List).map((book) => BookModel.fromJson(book)).toList();
+      return (response as List)
+          .map((book) => BookModel.fromJson(book))
+          .toList();
     } catch (e) {
       print('Error getting user books: $e');
       return [];
@@ -31,14 +33,16 @@ class BookService {
       if (response.isEmpty) return [];
 
       final bookIds = (response as List).map((fav) => fav['book_id']).toList();
-      
+
       final booksResponse = await _supabase
           .from('books')
           .select()
           .inFilter('id', bookIds)
           .order('created_at', ascending: false);
 
-      return (booksResponse as List).map((book) => BookModel.fromJson(book)).toList();
+      return (booksResponse as List)
+          .map((book) => BookModel.fromJson(book))
+          .toList();
     } catch (e) {
       print('Error getting user favorites: $e');
       return [];
@@ -53,7 +57,9 @@ class BookService {
           .select()
           .order('created_at', ascending: false);
 
-      return (response as List).map((book) => BookModel.fromJson(book)).toList();
+      return (response as List)
+          .map((book) => BookModel.fromJson(book))
+          .toList();
     } catch (e) {
       print('Error getting all books: $e');
       return [];
@@ -63,12 +69,10 @@ class BookService {
   // Add book to favorites
   Future<bool> addToFavorites(String userId, String bookId) async {
     try {
-      await _supabase
-          .from('user_favorites')
-          .insert({
-            'user_id': userId,
-            'book_id': bookId,
-          });
+      await _supabase.from('user_favorites').insert({
+        'user_id': userId,
+        'book_id': bookId,
+      });
 
       return true;
     } catch (e) {
@@ -106,6 +110,112 @@ class BookService {
       return response != null;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Create a new book
+  Future<String> createBook({
+    required String title,
+    required String author,
+    required String userId,
+    String? description,
+    String? genre,
+    String? coverUrl,
+  }) async {
+    try {
+      print('📚 Creating book in database:');
+      print('   - Title: $title');
+      print('   - Author: $author');
+      print('   - User ID: $userId');
+      print('   - Genre: $genre');
+      print('   - Cover URL: $coverUrl');
+
+      final bookData = {
+        'title': title,
+        'author': author,
+        'description': description ?? '',
+        'genre': genre ?? '',
+        'cover_url': coverUrl,
+        'user_id': userId,
+      };
+
+      print('📚 Book data to insert: $bookData');
+
+      final response = await _supabase
+          .from('books')
+          .insert(bookData)
+          .select('id')
+          .single();
+
+      print('✅ Book created successfully with ID: ${response['id']}');
+      return response['id'];
+    } catch (e) {
+      print('❌ Error creating book: $e');
+      print('❌ Error details: ${e.toString()}');
+      throw Exception('Failed to create book: $e');
+    }
+  }
+
+  // Search books by title, author, or genre
+  Future<List<BookModel>> searchBooks(String query) async {
+    try {
+      print('🔍 Searching for: "$query"');
+
+      if (query.trim().isEmpty) {
+        print('❌ Empty query, returning empty results');
+        return [];
+      }
+
+      final searchQuery = query.trim().toLowerCase();
+      print('🔍 Processed search query: "$searchQuery"');
+
+      // First, let's check if there are any books at all
+      final allBooksResponse = await _supabase.from('books').select().limit(5);
+
+      print('📚 Total books in database: ${allBooksResponse.length}');
+      if (allBooksResponse.isNotEmpty) {
+        print('📚 Sample book: ${allBooksResponse.first}');
+      }
+
+      // Search in title, author, and genre fields
+      final response = await _supabase
+          .from('books')
+          .select()
+          .or(
+            'title.ilike.%$searchQuery%,author.ilike.%$searchQuery%,genre.ilike.%$searchQuery%',
+          )
+          .order('created_at', ascending: false)
+          .limit(20);
+
+      print('🔍 Search results found: ${response.length}');
+
+      final results = (response as List)
+          .map((book) => BookModel.fromJson(book))
+          .toList();
+
+      print('✅ Search completed successfully');
+      return results;
+    } catch (e) {
+      print('❌ Error searching books: $e');
+      return [];
+    }
+  }
+
+  // Get books by genre
+  Future<List<BookModel>> getBooksByGenre(String genre) async {
+    try {
+      final response = await _supabase
+          .from('books')
+          .select()
+          .eq('genre', genre)
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((book) => BookModel.fromJson(book))
+          .toList();
+    } catch (e) {
+      print('Error getting books by genre: $e');
+      return [];
     }
   }
 }

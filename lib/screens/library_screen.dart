@@ -84,7 +84,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               Text(
                 "My Library",
                 style: TextStyle(
-                  color: Colors.black87,
+                  color: const Color(0xFF87CEEB),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -96,10 +96,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ],
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.search, color: Colors.grey),
-              onPressed: () {},
-            ),
             IconButton(
               icon: const Icon(Icons.menu, color: Colors.grey),
               onPressed: () {},
@@ -239,6 +235,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       Text(
                         "Local Library",
                         style: TextStyle(
+                          color: skyBlue,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -302,12 +299,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: GridView.builder(
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                childAspectRatio: 0.7,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                              ),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 3,
+                                    childAspectRatio: 0.7,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                  ),
                               itemCount: _localBooks.length,
                               itemBuilder: (context, index) {
                                 final book = _localBooks[index];
@@ -421,11 +419,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         : Container(
                             color: lightSkyBlue,
                             child: Center(
-                              child: Icon(
-                                Icons.book,
-                                color: skyBlue,
-                                size: 40,
-                              ),
+                              child: Icon(Icons.book, color: skyBlue, size: 40),
                             ),
                           ),
                   ),
@@ -531,10 +525,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             const SizedBox(height: 4),
             Text(
               'Last opened: ${book.lastOpenedText}',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
           ],
         ),
@@ -634,7 +625,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
       if (result != null && result.files.isNotEmpty) {
         final file = File(result.files.first.path!);
-        
+
         // Show loading dialog
         showDialog(
           context: context,
@@ -652,16 +643,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
         // Add book to local library
         final success = await _localBookService.addLocalBook(file);
-        
+
         Navigator.pop(context); // Close loading dialog
-        
+
         if (success) {
           // Reload local books
           await _loadLocalBooks();
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${result.files.first.name} added to local library'),
+              content: Text(
+                '${result.files.first.name} added to local library',
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -684,10 +677,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
   }
 
-  void _showDeleteConfirmation(
-    BuildContext context,
-    LocalBookModel book,
-  ) {
+  void _showDeleteConfirmation(BuildContext context, LocalBookModel book) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -735,7 +725,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void _openBook(LocalBookModel book) async {
     // Update last opened time
     await _localBookService.updateLastOpenedTime(book.id);
-    
+
     // Refresh the book list to update the last opened time
     _loadLocalBooks();
 
@@ -744,17 +734,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => BookReaderScreen(
-          book: book,
-          localBookService: _localBookService,
-        ),
+        builder: (context) =>
+            BookReaderScreen(book: book, localBookService: _localBookService),
       ),
     ).then((_) {
       // Refresh the book list when returning from the reader
       _loadLocalBooks();
     });
   }
-  
+
   void _showBookOptions(LocalBookModel book) {
     showModalBottomSheet(
       context: context,
@@ -778,17 +766,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
               leading: const Icon(Icons.share),
               title: const Text('Share'),
               onTap: () {
-                 Navigator.pop(context);
-                 // Implement share functionality
-               },
+                Navigator.pop(context);
+                // Implement share functionality
+              },
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text('Delete', style: TextStyle(color: Colors.red)),
               onTap: () {
-                 Navigator.pop(context);
-                 _showDeleteConfirmation(context, book);
-               },
+                Navigator.pop(context);
+                _showDeleteConfirmation(context, book);
+              },
             ),
           ],
         ),
@@ -798,24 +786,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   void _shareBook(LocalBookModel book) {
     // TODO: Implement book sharing functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Sharing ${book.title}...'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Sharing ${book.title}...')));
   }
-  
+
   void _deleteBook(LocalBookModel book) async {
     try {
       await _localBookService.deleteBook(book);
       setState(() {
         _loadLocalBooks();
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${book.title} deleted'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${book.title} deleted')));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

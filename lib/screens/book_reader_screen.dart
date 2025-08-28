@@ -232,7 +232,7 @@ class _BookReaderScreenState extends State<BookReaderScreen> {
         });
       },
       onPageChanged: (PdfPageChangedDetails details) {
-        // Get total pages from the controller instead since PdfPageChangedDetails doesn't have pageCount
+        // Use the book's totalPages property since PdfPageChangedDetails doesn't provide pageCount
         final totalPages = widget.book.totalPages ?? 1;
         _updateReadingProgress(details.newPageNumber, totalPages);
       },

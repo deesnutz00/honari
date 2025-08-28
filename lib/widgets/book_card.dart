@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:honari/screens/book_details.dart';
 
@@ -10,6 +12,7 @@ class BookCard extends StatelessWidget {
   final double rating;
   final int reviews;
   final String coverUrl;
+  final bool isLocal; // <-- Add this
 
   const BookCard({
     super.key,
@@ -21,10 +24,34 @@ class BookCard extends StatelessWidget {
     required this.rating,
     required this.reviews,
     required this.coverUrl,
+    this.isLocal = false, // <-- Add this
   });
 
   @override
   Widget build(BuildContext context) {
+    Widget coverWidget;
+    if (isLocal) {
+      coverWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.file(
+          File(coverUrl),
+          height: 180,
+          width: 140,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      coverWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          coverUrl,
+          height: 180,
+          width: 140,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -50,15 +77,7 @@ class BookCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                coverUrl,
-                height: 180,
-                width: 140,
-                fit: BoxFit.cover,
-              ),
-            ),
+            coverWidget,
             const SizedBox(height: 6),
             Text(
               title,

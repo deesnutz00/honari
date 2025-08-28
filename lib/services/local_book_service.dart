@@ -27,13 +27,13 @@ class LocalBookService {
         try {
           final Map<String, dynamic> bookMap = {};
           final parts = bookJson.split('|||');
-          
+
           for (final part in parts) {
             final keyValue = part.split('::');
             if (keyValue.length >= 2) {
               final key = keyValue[0];
               final value = keyValue[1];
-              
+
               // Convert string values to appropriate types
               if (key == 'fileSizeBytes' || key == 'totalPages') {
                 bookMap[key] = int.tryParse(value) ?? 0;
@@ -44,7 +44,7 @@ class LocalBookService {
               }
             }
           }
-          
+
           final book = LocalBookModel.fromJson(bookMap);
           books.add(book);
         } catch (e) {
@@ -185,11 +185,18 @@ class LocalBookService {
       final bookIndex = books.indexWhere((b) => b.id == bookId);
 
       if (bookIndex != -1) {
+        // Create a new book instance with updated lastOpened time
         final updatedBook = books[bookIndex].copyWith(
           lastOpened: DateTime.now(),
         );
+
+        // Update the book in the list
         books[bookIndex] = updatedBook;
+
+        // Save the updated list to storage
         await _saveBooks(books);
+
+        // Refresh the book list to reflect changes immediately
         return true;
       }
       return false;
@@ -332,11 +339,28 @@ class LocalBookService {
     try {
       switch (extension.toLowerCase()) {
         case 'cbz':
-          return await _extractCbzCover(filePath, coversDir, bookId);
+          return await _extractFirstPageAsCover(
+            filePath,
+            coversDir,
+            bookId,
+            'cbz',
+          );
         case 'epub':
-          return await _extractEpubCover(filePath, coversDir, bookId);
+          return await _extractFirstPageAsCover(
+            filePath,
+            coversDir,
+            bookId,
+            'epub',
+          );
         case 'pdf':
-          return await _extractPdfCover(filePath, coversDir, bookId);
+          return await _extractFirstPageAsCover(
+            filePath,
+            coversDir,
+            bookId,
+            'pdf',
+          );
+        case 'txt':
+          return await _extractTextCover(filePath, coversDir, bookId);
         default:
           return null;
       }
@@ -346,34 +370,62 @@ class LocalBookService {
     }
   }
 
-  // Extract cover from CBZ file
-  Future<String?> _extractCbzCover(
+  // Extract first page as cover for supported formats
+  Future<String?> _extractFirstPageAsCover(
     String filePath,
     String coversDir,
     String bookId,
+    String format,
+  ) async {
+    try {
+      final coverPath = '$coversDir/${bookId}_cover.jpg';
+
+      switch (format) {
+        case 'cbz':
+          return await _extractCbzFirstPage(filePath, coverPath);
+        case 'epub':
+          return await _extractEpubFirstPage(filePath, coverPath);
+        case 'pdf':
+          return await _extractPdfFirstPage(filePath, coverPath);
+        default:
+          return null;
+      }
+    } catch (e) {
+      print('Error extracting first page cover: $e');
+      return null;
+    }
+  }
+
+  // Extract first page from CBZ file as cover
+  Future<String?> _extractCbzFirstPage(
+    String filePath,
+    String coverPath,
   ) async {
     try {
       final bytes = await File(filePath).readAsBytes();
       final archive = ZipDecoder().decodeBytes(bytes);
 
-      ArchiveFile? coverFile;
+      // Find the first image file (sorted alphabetically)
+      List<ArchiveFile> imageFiles = [];
       for (final file in archive) {
         final fileName = file.name.toLowerCase();
         if (fileName.endsWith('.jpg') ||
             fileName.endsWith('.jpeg') ||
-            fileName.endsWith('.png')) {
-          coverFile = file;
-          break;
+            fileName.endsWith('.png') ||
+            fileName.endsWith('.gif') ||
+            fileName.endsWith('.webp')) {
+          imageFiles.add(file);
         }
       }
 
-      if (coverFile != null) {
-        final coverPath = '$coversDir/${bookId}_cover.jpg';
-        final coverBytes = coverFile.content as List<int>;
+      // Sort by filename to ensure consistent first page
+      imageFiles.sort((a, b) => a.name.compareTo(b.name));
 
-        final image = img.decodeImage(
-          Uint8List.fromList(coverBytes),
-        ); // ✅ FIXED
+      if (imageFiles.isNotEmpty) {
+        final firstPage = imageFiles.first;
+        final imageBytes = firstPage.content as List<int>;
+
+        final image = img.decodeImage(Uint8List.fromList(imageBytes));
         if (image != null) {
           final resized = img.copyResize(image, width: 300, height: 400);
           final resizedBytes = img.encodeJpg(resized, quality: 85);
@@ -384,21 +436,21 @@ class LocalBookService {
 
       return null;
     } catch (e) {
-      print('Error extracting CBZ cover: $e');
+      print('Error extracting CBZ first page: $e');
       return null;
     }
   }
 
-  // Extract cover from EPUB file
-  Future<String?> _extractEpubCover(
+  // Extract first page from EPUB file as cover
+  Future<String?> _extractEpubFirstPage(
     String filePath,
-    String coversDir,
-    String bookId,
+    String coverPath,
   ) async {
     try {
       final bytes = await File(filePath).readAsBytes();
       final archive = ZipDecoder().decodeBytes(bytes);
 
+      // Look for cover image in EPUB
       ArchiveFile? coverFile;
       for (final file in archive) {
         final fileName = file.name.toLowerCase();
@@ -411,13 +463,22 @@ class LocalBookService {
         }
       }
 
-      if (coverFile != null) {
-        final coverPath = '$coversDir/${bookId}_cover.jpg';
-        final coverBytes = coverFile.content as List<int>;
+      // If no cover found, try to find first image
+      if (coverFile == null) {
+        for (final file in archive) {
+          final fileName = file.name.toLowerCase();
+          if (fileName.endsWith('.jpg') ||
+              fileName.endsWith('.jpeg') ||
+              fileName.endsWith('.png')) {
+            coverFile = file;
+            break;
+          }
+        }
+      }
 
-        final image = img.decodeImage(
-          Uint8List.fromList(coverBytes),
-        ); // ✅ FIXED
+      if (coverFile != null) {
+        final imageBytes = coverFile.content as List<int>;
+        final image = img.decodeImage(Uint8List.fromList(imageBytes));
         if (image != null) {
           final resized = img.copyResize(image, width: 300, height: 400);
           final resizedBytes = img.encodeJpg(resized, quality: 85);
@@ -428,62 +489,167 @@ class LocalBookService {
 
       return null;
     } catch (e) {
-      print('Error extracting EPUB cover: $e');
+      print('Error extracting EPUB first page: $e');
       return null;
     }
   }
 
-  // Extract cover from PDF file
-  Future<String?> _extractPdfCover(
+  // Extract first page from PDF file as cover
+  Future<String?> _extractPdfFirstPage(
+    String filePath,
+    String coverPath,
+  ) async {
+    try {
+      // For PDF, we'll create a cover that shows it's a PDF with the filename
+      final fileName = path.basename(filePath);
+      final canvas = ui.PictureRecorder();
+      final paint = Paint()..color = Colors.white;
+
+      final pictureCanvas = Canvas(canvas);
+      pictureCanvas.drawRect(Rect.fromLTWH(0, 0, 300, 400), paint);
+
+      // Draw PDF icon background
+      paint.color = Colors.red.shade100;
+      pictureCanvas.drawRect(Rect.fromLTWH(75, 100, 150, 200), paint);
+
+      // Draw PDF icon
+      paint.color = Colors.red;
+      pictureCanvas.drawRect(Rect.fromLTWH(85, 110, 130, 180), paint);
+
+      // Draw text
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: 'PDF',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 40,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+
+      textPainter.paint(
+        pictureCanvas,
+        Offset(150 - textPainter.width / 2, 200 - textPainter.height / 2),
+      );
+
+      // Draw filename
+      final filenamePainter = TextPainter(
+        text: TextSpan(
+          text: fileName.length > 20
+              ? '${fileName.substring(0, 20)}...'
+              : fileName,
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 2,
+      );
+      filenamePainter.layout();
+
+      filenamePainter.paint(
+        pictureCanvas,
+        Offset(150 - filenamePainter.width / 2, 320),
+      );
+
+      final picture = canvas.endRecording();
+      final img = await picture.toImage(300, 400);
+      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+
+      if (byteData != null) {
+        await File(coverPath).writeAsBytes(byteData.buffer.asUint8List());
+        return coverPath;
+      }
+
+      return null;
+    } catch (e) {
+      print('Error extracting PDF first page: $e');
+      return null;
+    }
+  }
+
+  // Create a text-based cover for TXT files
+  Future<String?> _extractTextCover(
     String filePath,
     String coversDir,
     String bookId,
   ) async {
     try {
       final coverPath = '$coversDir/${bookId}_cover.jpg';
-      
-      // Create a placeholder cover for PDF files
-      // This is a temporary solution until we can properly render PDF pages
+      final fileName = path.basename(filePath);
+
       final canvas = ui.PictureRecorder();
-      final paint = Paint()
-        ..color = Colors.white;
+      final paint = Paint()..color = Colors.blue.shade50;
+
+      final pictureCanvas = Canvas(canvas);
+      pictureCanvas.drawRect(Rect.fromLTWH(0, 0, 300, 400), paint);
+
+      // Draw text icon
+      paint.color = Colors.blue.shade200;
+      pictureCanvas.drawRect(Rect.fromLTWH(75, 100, 150, 200), paint);
+
+      // Draw text icon
+      paint.color = Colors.blue;
+      pictureCanvas.drawRect(Rect.fromLTWH(85, 110, 130, 180), paint);
+
+      // Draw "TXT" text
       final textPainter = TextPainter(
         text: TextSpan(
-          text: 'PDF',
-          style: TextStyle(color: Colors.black, fontSize: 40, fontWeight: FontWeight.bold),
+          text: 'TXT',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 40,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-      
-      final pictureCanvas = Canvas(canvas);
-      pictureCanvas.drawRect(Rect.fromLTWH(0, 0, 300, 400), paint);
-      
-      // Draw a PDF icon
-      paint.color = Colors.red;
-      pictureCanvas.drawRect(Rect.fromLTWH(75, 100, 150, 200), paint);
-      
-      // Draw text in the center
+
       textPainter.paint(
-        pictureCanvas, 
-        Offset(
-          150 - textPainter.width / 2,
-          200 - textPainter.height / 2,
-        ),
+        pictureCanvas,
+        Offset(150 - textPainter.width / 2, 200 - textPainter.height / 2),
       );
-      
+
+      // Draw filename
+      final filenamePainter = TextPainter(
+        text: TextSpan(
+          text: fileName.length > 20
+              ? '${fileName.substring(0, 20)}...'
+              : fileName,
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 2,
+      );
+      filenamePainter.layout();
+
+      filenamePainter.paint(
+        pictureCanvas,
+        Offset(150 - filenamePainter.width / 2, 320),
+      );
+
       final picture = canvas.endRecording();
       final img = await picture.toImage(300, 400);
       final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-      
+
       if (byteData != null) {
         await File(coverPath).writeAsBytes(byteData.buffer.asUint8List());
         return coverPath;
       }
-      
+
       return null;
     } catch (e) {
-      print('Error extracting PDF cover: $e');
+      print('Error creating text cover: $e');
       return null;
     }
   }
@@ -551,5 +717,26 @@ class LocalBookService {
   Future<String> getCoversDirectoryPath() async {
     final appDir = await getApplicationDocumentsDirectory();
     return '${appDir.path}/$_coversDirectory';
+  }
+
+  // Search local books by title, author, or genre
+  Future<List<LocalBookModel>> searchLocalBooks(String query) async {
+    try {
+      if (query.trim().isEmpty) {
+        return [];
+      }
+
+      final allBooks = await getLocalBooks();
+      final searchQuery = query.trim().toLowerCase();
+
+      return allBooks.where((book) {
+        return book.title.toLowerCase().contains(searchQuery) ||
+            book.author.toLowerCase().contains(searchQuery) ||
+            (book.genre?.toLowerCase().contains(searchQuery) ?? false);
+      }).toList();
+    } catch (e) {
+      print('Error searching local books: $e');
+      return [];
+    }
   }
 }

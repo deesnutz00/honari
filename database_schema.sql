@@ -2,6 +2,12 @@
 -- COMPLETE SCHEMA FOR HONARI BOOK APP
 -- =====================================================
 
+-- Create public schema if it doesn't exist
+CREATE SCHEMA IF NOT EXISTS public;
+
+-- Set search path to public
+SET search_path TO public;
+
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -23,10 +29,19 @@ CREATE TABLE IF NOT EXISTS books (
   description TEXT DEFAULT '',
   genre TEXT DEFAULT '',
   cover_url TEXT,
+  first_page_url TEXT,
+  book_file_url TEXT,
+  book_file_path TEXT,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure description column exists (for existing tables)
+ALTER TABLE books ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+ALTER TABLE books ADD COLUMN IF NOT EXISTS first_page_url TEXT;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS book_file_url TEXT;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS book_file_path TEXT;
 
 -- =====================================================
 -- 3. USER FAVORITES TABLE
@@ -58,10 +73,10 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 );
 
 -- =====================================================
--- 5. USER RELATIONSHIPS TABLE
+-- 5. USER FOLLOWS TABLE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS user_relationships (
+CREATE TABLE IF NOT EXISTS user_follows (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   follower_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   following_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -219,7 +234,7 @@ CREATE INDEX IF NOT EXISTS idx_books_search ON books USING gin(to_tsvector('engl
 ALTER TABLE books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_favorites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_relationships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_follows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_comments ENABLE ROW LEVEL SECURITY;
@@ -265,8 +280,13 @@ CREATE POLICY "Users can view all profiles" ON user_profiles
 CREATE POLICY "Users can update their own profile" ON user_profiles
   FOR UPDATE USING (auth.uid() = id);
 
+-- Allow users to insert their own profile OR allow service role for signup trigger
 CREATE POLICY "Users can insert their own profile" ON user_profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
+  FOR INSERT WITH CHECK (
+    auth.uid() = id OR
+    auth.role() = 'service_role' OR
+    auth.uid() IS NULL  -- Allow during signup when user is not yet authenticated
+  );
 
 -- =====================================================
 -- 18. POSTS POLICIES
@@ -288,8 +308,8 @@ CREATE POLICY "Users can delete their own posts" ON posts
 -- 19. OTHER TABLE POLICIES
 -- =====================================================
 
--- User relationships
-CREATE POLICY "Users can manage their own relationships" ON user_relationships
+-- User follows
+CREATE POLICY "Users can manage their own follows" ON user_follows
   FOR ALL USING (auth.uid() = follower_id OR auth.uid() = following_id);
 
 -- Post likes
@@ -315,9 +335,21 @@ CREATE POLICY "Users can manage their own reading progress" ON reading_progress
 -- 20. GRANT PERMISSIONS
 -- =====================================================
 
+-- Grant usage on schema
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA public TO anon;
+
 -- Grant permissions to authenticated users
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- Grant permissions to anonymous users (for signup)
+GRANT SELECT, INSERT ON TABLE user_profiles TO anon;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO anon;
+
+-- Grant permissions to service role (for triggers and functions)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
 -- =====================================================
 -- 21. STORAGE BUCKET SETUP
@@ -376,7 +408,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.user_profiles (id, username)
-  VALUES (new.id, new.raw_user_meta_data->>'username');
+  VALUES (new.id, COALESCE(new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'username', 'User'));
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -391,21 +423,36 @@ CREATE TRIGGER on_auth_user_created
 -- SCHEMA COMPLETE! 🎉
 -- =====================================================
 
+-- IMPORTANT: If you still get permission errors, you may need to run this schema
+-- as a database administrator or service role. Alternatively, you can:
+-- 1. Go to Supabase Dashboard > SQL Editor
+-- 2. Run this schema with proper admin privileges
+-- 3. Or ask your database administrator to grant the necessary permissions
+
+-- For development/testing, you can temporarily disable RLS on user_profiles:
+-- ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
+-- (Remember to re-enable it for production!)
+
+-- Alternative: If you can't run the full schema, try this minimal setup:
+-- 1. Create just the user_profiles table manually in Supabase Dashboard
+-- 2. Disable RLS temporarily for testing
+-- 3. Re-enable RLS and create proper policies after confirming it works
 
 
 
--- Allow authenticated users to upload files
-CREATE POLICY "Allow authenticated uploads" ON storage.objects
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
--- Allow authenticated users to view files
-CREATE POLICY "Allow authenticated downloads" ON storage.objects
-  FOR SELECT USING (auth.role() = 'authenticated');
+-- IMPORTANT: Storage policies are managed automatically by Supabase
+-- Do NOT run storage policy commands in this schema as they require
+-- superuser privileges that regular users don't have.
 
--- Allow users to update their own files
-CREATE POLICY "Allow users to update own files" ON storage.objects
-  FOR UPDATE USING (auth.uid()::text = (storage.foldername(name))[1]);
+-- To set up storage buckets for COVERS TO DISPLAY PROPERLY:
+-- 1. Go to Supabase Dashboard > Storage
+-- 2. Create a bucket named 'books'
+-- 3. Go to bucket settings and make it PUBLIC (allow public access)
+-- 4. This allows cover images to be displayed without authentication
+-- 5. Book files will still use signed URLs for security
 
--- Allow users to delete their own files
-CREATE POLICY "Allow users to delete own files" ON storage.objects
-  FOR DELETE USING (auth.uid()::text = (storage.foldername(name))[1]);
+-- Alternative: If you don't want public access, you can:
+-- 1. Keep bucket private
+-- 2. Use signed URLs for covers too (but they expire)
+-- 3. Regenerate signed URLs when displaying covers

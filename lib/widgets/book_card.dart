@@ -49,6 +49,25 @@ class BookCard extends StatelessWidget {
           height: 180,
           width: 140,
           fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              height: 180,
+              width: 140,
+              color: Colors.grey[200],
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            print('BookCard: Error loading cover: $error');
+            print('BookCard: Cover URL: $coverUrl');
+            return Container(
+              height: 180,
+              width: 140,
+              color: Colors.grey[200],
+              child: const Icon(Icons.book, size: 48, color: Colors.grey),
+            );
+          },
         ),
       );
     }

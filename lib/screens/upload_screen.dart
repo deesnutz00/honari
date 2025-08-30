@@ -219,18 +219,33 @@ class _UploadScreenState extends State<UploadScreen> {
 
                         print('📁 Uploading file: $uniqueFileName');
 
+                        // Upload to 'books' bucket (consistent with book service)
                         await Supabase.instance.client.storage
-                            .from('deesnutz00')
+                            .from('books')
                             .upload(uniqueFileName, file);
 
                         print('✅ File uploaded to storage successfully');
 
-                        // Get public URL for the uploaded file from the same bucket
-                        final fileUrl = Supabase.instance.client.storage
-                            .from('deesnutz00')
+                        // Store the file path for signed URL generation
+                        final filePath =
+                            uniqueFileName; // This is the path within the bucket
+
+                        // Get public URL for cover (covers should be publicly accessible)
+                        final publicUrl = Supabase.instance.client.storage
+                            .from('books')
                             .getPublicUrl(uniqueFileName);
 
-                        print('🔗 File URL: $fileUrl');
+                        print('🔗 Public URL for cover: $publicUrl');
+
+                        // Generate a signed URL for the book file (for reading)
+                        final signedUrl = await Supabase.instance.client.storage
+                            .from('books')
+                            .createSignedUrl(
+                              uniqueFileName,
+                              3600,
+                            ); // 1 hour expiry
+
+                        print('🔗 Signed URL for reading: $signedUrl');
 
                         // Create book record in database
                         print('📚 Creating book record in database...');
@@ -239,11 +254,22 @@ class _UploadScreenState extends State<UploadScreen> {
                           author: authorController.text,
                           description: descriptionController.text,
                           genre: genreController.text,
-                          coverUrl: fileUrl,
+                          coverUrl:
+                              publicUrl, // Use public URL for cover display
+                          bookFileUrl: signedUrl, // Use signed URL for reading
                           userId: user.id,
                         );
 
                         print('✅ Book record created with ID: $bookId');
+
+                        // Update the book with file path information for future signed URL generation
+                        await _bookService.updateBookFile(
+                          bookId,
+                          filePath, // Store the file path for signed URL generation
+                          publicUrl, // Store the public URL for cover display
+                        );
+
+                        print('✅ Book file information updated');
 
                         // Show success message
                         if (!mounted) return;

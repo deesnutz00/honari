@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'profile_screen.dart';
 import 'upload_screen.dart';
 import 'library_screen.dart';
@@ -6,6 +8,9 @@ import 'social_screen.dart';
 import 'book_details.dart';
 import 'package:honari/widgets/search_overlay.dart';
 import '../models/book_model.dart';
+import '../models/local_book_model.dart';
+import '../services/book_service.dart';
+import '../services/local_book_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -17,9 +22,23 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   bool _isSearchVisible = false;
+  bool _isLoading = true;
 
   final Color skyBlue = const Color(0xFF87CEEB);
   final Color sakuraPink = const Color(0xFFFCE4EC);
+
+  // Database services
+  final BookService _bookService = BookService();
+  final LocalBookService _localBookService = LocalBookService();
+
+  // Book data
+  List<BookModel> _trendingBooks = [];
+  List<BookModel> _recommendedBooks = [];
+  List<BookModel> _recentBooks = [];
+  List<LocalBookModel> _localBooks = [];
+  final String _dailyQuote =
+      "Replace this with dynamic quotes from your database when ready.";
+  final String _quoteAuthor = "— Honari";
 
   // Remove the _screens list initialization from initState
   // We'll build screens on-demand to prevent memory issues
@@ -27,7 +46,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Removed _screens initialization to prevent memory issues
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Load trending books (most recent books)
+      final allBooks = await _bookService.getAllBooks();
+      _trendingBooks = allBooks.take(5).toList();
+
+      // Load user's recent books (books they've interacted with recently)
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        final userBooks = await _bookService.getUserBooks(user.id);
+        _recentBooks = userBooks.take(5).toList();
+
+        // Use the same books as trending but in reverse order for recommendations
+        _recommendedBooks = _trendingBooks.reversed.toList();
+      } else {
+        // If no user, show trending books in reverse order as recommendations
+        _recommendedBooks = _trendingBooks.reversed.toList();
+        _recentBooks = [];
+      }
+
+      // Load local books from device storage
+      _localBooks = await _localBookService.getLocalBooks();
+
+      // Load daily quote (for now, keep static, but could be from database)
+      // TODO: Implement dynamic quotes from database
+    } catch (e) {
+      print('Error loading dashboard data: $e');
+      // Keep empty lists on error
+      _trendingBooks = [];
+      _recommendedBooks = [];
+      _recentBooks = [];
+      _localBooks = [];
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _onItemTapped(int index) {
@@ -67,24 +129,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHomeScreen() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.only(
+        bottom: 24,
+      ), // Remove horizontal padding since ListView has its own
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 16), // Add top padding
           _buildSection("Trending Now"),
-          _buildPlaceholderList("trending"),
+          _buildBookList(_trendingBooks, "trending"),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20), // Reduced spacing for compact design
           _buildSection("Recommendations from Friends"),
-          _buildPlaceholderList("recommendations"),
+          _buildBookList(_recommendedBooks, "recommendations"),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20), // Reduced spacing for compact design
           _buildSection("Recently Opened"),
-          _buildPlaceholderList("recent"),
+          _buildBookList(_recentBooks, "recent"),
+
+          const SizedBox(height: 20), // Reduced spacing for compact design
+          _buildSection("Local Library"),
+          _buildLocalBookList(_localBooks),
 
           const SizedBox(height: 32),
-          _buildDailyQuote(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildDailyQuote(),
+          ),
           const SizedBox(height: 24),
         ],
       ),
@@ -105,48 +181,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildPlaceholderList(String type) {
-    return SizedBox(
-      height: 220,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: List.generate(
-          3,
-          (index) => _buildPlaceholderBookCard(type, index),
+  Widget _buildBookList(List<BookModel> books, String type) {
+    if (books.isEmpty) {
+      return Container(
+        height: 120,
+        alignment: Alignment.center,
+        child: Text(
+          "No ${type == "trending"
+              ? "trending"
+              : type == "recommendations"
+              ? "recommended"
+              : "recent"} books available",
+          style: TextStyle(color: Colors.grey[600], fontSize: 14),
         ),
+      );
+    }
+
+    return SizedBox(
+      height: 210, // Reduced height for smaller cards
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+        ), // Add horizontal padding
+        itemCount: books.length,
+        itemBuilder: (context, index) {
+          final book = books[index];
+          return _buildBookCard(book, type);
+        },
       ),
     );
   }
 
-  Widget _buildPlaceholderBookCard(String type, int index) {
+  Widget _buildLocalBookList(List<LocalBookModel> books) {
+    if (books.isEmpty) {
+      return Container(
+        height: 120,
+        alignment: Alignment.center,
+        child: Text(
+          "No local books available",
+          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 210, // Reduced height for smaller cards
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+        ), // Add horizontal padding
+        itemCount: books.length,
+        itemBuilder: (context, index) {
+          final book = books[index];
+          return _buildLocalBookCard(book);
+        },
+      ),
+    );
+  }
+
+  Widget _buildBookCard(BookModel book, String type) {
     return GestureDetector(
       onTap: () {
         try {
-          // TODO: Replace with actual book data from database when ready
-          // For now, navigate to book details with placeholder data
-          // Create a placeholder BookModel for navigation
-          final placeholderBook = BookModel(
-            id: 'placeholder_${type}_${DateTime.now().millisecondsSinceEpoch}',
-            title: type == "trending"
-                ? "Trending Book"
-                : type == "recommendations"
-                ? "Friend's Pick"
-                : "Recent Book",
-            author: "Author Name",
-            genre: "Genre",
-            userId: 'placeholder_user',
-            createdAt: DateTime.now(),
-            description:
-                "This is a placeholder book for demonstration purposes.",
-            bookFileUrl:
-                "https://example.com/sample.pdf", // Placeholder URL for demo
-          );
-
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => BookDetailsScreen(book: placeholderBook),
-            ),
+            MaterialPageRoute(builder: (_) => BookDetailsScreen(book: book)),
           );
         } catch (e) {
           // Show error dialog if navigation fails
@@ -166,62 +267,160 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       },
       child: Container(
-        width: 140,
-        margin: const EdgeInsets.only(right: 12),
+        width: 120, // Reduced width to prevent overflow
+        margin: const EdgeInsets.only(right: 8), // Reduced margin
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Book Cover Container with fixed dimensions
             Container(
-              height: 180,
-              width: 140,
+              height: 160, // Reduced height
+              width: 120, // Reduced width
               decoration: BoxDecoration(
                 color: skyBlue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: skyBlue.withOpacity(0.3), width: 1),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.book, size: 40, color: skyBlue.withOpacity(0.6)),
-                  const SizedBox(height: 8),
-                  Text(
-                    type == "trending"
-                        ? "Trending\nBook"
-                        : type == "recommendations"
-                        ? "Friend's\nPick"
-                        : "Recent\nBook",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: skyBlue.withOpacity(0.7),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+              child: book.coverUrl != null && book.coverUrl!.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        book.coverUrl!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildPlaceholderCover(type);
+                        },
+                      ),
+                    )
+                  : _buildPlaceholderCover(type),
             ),
+
+            // Only show book title
             const SizedBox(height: 6),
-            Container(
-              height: 16,
-              width: 120,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              height: 12,
-              width: 80,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(4),
+            SizedBox(
+              height: 36, // Fixed height for title
+              child: Text(
+                book.title,
+                style: const TextStyle(
+                  fontSize: 12, // Smaller font
+                  fontWeight: FontWeight.w500,
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLocalBookCard(LocalBookModel book) {
+    return GestureDetector(
+      onTap: () {
+        // Navigate to library screen or open local book reader
+        Navigator.pushNamed(context, '/library');
+      },
+      child: Container(
+        width: 120, // Reduced width to prevent overflow
+        margin: const EdgeInsets.only(right: 8), // Reduced margin
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Book Cover Container with fixed dimensions
+            Container(
+              height: 160, // Reduced height
+              width: 120, // Reduced width
+              decoration: BoxDecoration(
+                color: skyBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: skyBlue.withOpacity(0.3), width: 1),
+              ),
+              child: book.coverPath != null && book.coverPath!.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(book.coverPath!),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildLocalPlaceholderCover();
+                        },
+                      ),
+                    )
+                  : _buildLocalPlaceholderCover(),
+            ),
+
+            // Only show book title
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 36, // Fixed height for title
+              child: Text(
+                book.title,
+                style: const TextStyle(
+                  fontSize: 12, // Smaller font
+                  fontWeight: FontWeight.w500,
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderCover(String type) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.book, size: 32, color: skyBlue.withOpacity(0.6)),
+        const SizedBox(height: 4),
+        Text(
+          type == "trending"
+              ? "Trending\nBook"
+              : type == "recommendations"
+              ? "Recommended\nBook"
+              : "Recent\nBook",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 10,
+            color: skyBlue.withOpacity(0.7),
+            fontWeight: FontWeight.w500,
+            height: 1.2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocalPlaceholderCover() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.sd_storage, size: 32, color: skyBlue.withOpacity(0.6)),
+        const SizedBox(height: 4),
+        Text(
+          "Local\nBook",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 10,
+            color: skyBlue.withOpacity(0.7),
+            fontWeight: FontWeight.w500,
+            height: 1.2,
+          ),
+        ),
+      ],
     );
   }
 
@@ -256,7 +455,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            "Replace this with dynamic quotes from your database when ready.",
+            _dailyQuote,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey[600],

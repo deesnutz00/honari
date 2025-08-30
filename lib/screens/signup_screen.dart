@@ -45,14 +45,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       if (response.user != null) {
-        // Create user record in the users table
-        await Supabase.instance.client.from('users').insert({
-          'id': response.user!.id,
-          'username': name,
-          'email': email,
-          'created_at': DateTime.now().toIso8601String(),
-        });
-        
+        // Note: User profile will be created automatically by database trigger
+        // The trigger 'on_auth_user_created' will insert into user_profiles table
+
         showMessage(
           'Account created! Please check your email for confirmation.',
         );

@@ -121,6 +121,7 @@ class BookService {
     String? description,
     String? genre,
     String? coverUrl,
+    String? bookFileUrl,
   }) async {
     try {
       print('📚 Creating book in database:');
@@ -129,6 +130,7 @@ class BookService {
       print('   - User ID: $userId');
       print('   - Genre: $genre');
       print('   - Cover URL: $coverUrl');
+      print('   - Book File URL: $bookFileUrl');
 
       final bookData = {
         'title': title,
@@ -136,6 +138,7 @@ class BookService {
         'description': description ?? '',
         'genre': genre ?? '',
         'cover_url': coverUrl,
+        'book_file_url': bookFileUrl,
         'user_id': userId,
       };
 
@@ -222,27 +225,99 @@ class BookService {
   // Get signed URL for reading a book from storage
   Future<String?> getBookReadUrl(String bookId) async {
     try {
-      // First get the book to find the file path
+      print('BookService: Getting read URL for book ID: $bookId');
+
+      // Get the book to find the file path
       final response = await _supabase
           .from('books')
-          .select('book_file_path')
+          .select('book_file_path, book_file_url')
           .eq('id', bookId)
           .single();
 
-      if (response['book_file_path'] == null) {
-        return null;
+      print('BookService: Database response: $response');
+
+      // Always try to create a fresh signed URL from the file path for security
+      if (response['book_file_path'] != null &&
+          response['book_file_path'].toString().isNotEmpty) {
+        final filePath = response['book_file_path'] as String;
+        print('BookService: Creating fresh signed URL for path: $filePath');
+
+        // Clean the path if it has bucket prefix
+        String cleanPath = filePath;
+        if (filePath.startsWith('books/')) {
+          cleanPath = filePath.substring(6); // Remove 'books/' prefix
+        }
+
+        print('BookService: Clean path: $cleanPath');
+
+        // Get a fresh signed URL for reading the file (1 hour expiry)
+        final signedUrl = await _supabase.storage
+            .from('books')
+            .createSignedUrl(cleanPath, 3600);
+
+        print('BookService: Generated fresh signed URL: $signedUrl');
+        return signedUrl;
       }
 
-      final filePath = response['book_file_path'] as String;
+      // Fallback: if no file path but we have a stored URL, try to refresh it
+      if (response['book_file_url'] != null &&
+          response['book_file_url'].toString().isNotEmpty) {
+        final storedUrl = response['book_file_url'] as String;
+        print('BookService: Found stored URL: $storedUrl');
 
-      // Get a signed URL for reading the file
-      final signedUrl = await _supabase.storage
-          .from('books')
-          .createSignedUrl(filePath, 3600); // 1 hour expiry
+        // Always generate a fresh signed URL instead of using stored ones
+        // This ensures the URL is always valid
+        try {
+          // Try to extract the file path from various URL formats
+          String filePath = '';
 
-      return signedUrl;
+          if (storedUrl.contains('/storage/v1/object/sign/')) {
+            // Signed URL format: extract the path part
+            final uri = Uri.parse(storedUrl);
+            final pathParts = uri.path.split('/storage/v1/object/sign/');
+            if (pathParts.length > 1) {
+              filePath = pathParts[1].split('?')[0]; // Remove query parameters
+            }
+          } else if (storedUrl.contains('/storage/v1/object/public/')) {
+            // Public URL format: extract the path part
+            final uri = Uri.parse(storedUrl);
+            final pathParts = uri.path.split('/storage/v1/object/public/');
+            if (pathParts.length > 1) {
+              filePath = pathParts[1];
+            }
+          }
+
+          if (filePath.isNotEmpty) {
+            print('BookService: Extracted file path from URL: $filePath');
+
+            // Clean the path
+            if (filePath.startsWith('books/')) {
+              filePath = filePath.substring(6);
+            }
+
+            final signedUrl = await _supabase.storage
+                .from('books')
+                .createSignedUrl(filePath, 3600);
+
+            print(
+              'BookService: Generated fresh signed URL from stored URL: $signedUrl',
+            );
+            return signedUrl;
+          }
+        } catch (e) {
+          print('BookService: Could not extract path from stored URL: $e');
+        }
+
+        // If we can't extract the path, return the stored URL as last resort
+        print('BookService: Returning stored URL as fallback');
+        return storedUrl;
+      }
+
+      print('BookService: No file path or URL found in database');
+      return null;
     } catch (e) {
-      print('Error getting book read URL: $e');
+      print('BookService: Error getting book read URL: $e');
+      print('BookService: Error details: ${e.toString()}');
       return null;
     }
   }
@@ -254,15 +329,47 @@ class BookService {
     String fileUrl,
   ) async {
     try {
-      await _supabase
-          .from('books')
-          .update({'book_file_path': filePath, 'book_file_url': fileUrl})
-          .eq('id', bookId);
+      print('BookService: Updating book file for ID: $bookId');
+      print('BookService: File path: $filePath');
+      print('BookService: File URL: $fileUrl');
 
+      // Store both the path (for signed URL generation) and URL (as backup)
+      final updateData = {'book_file_path': filePath, 'book_file_url': fileUrl};
+
+      print('BookService: Update data: $updateData');
+
+      await _supabase.from('books').update(updateData).eq('id', bookId);
+
+      print('BookService: Book file updated successfully');
       return true;
     } catch (e) {
-      print('Error updating book file: $e');
+      print('BookService: Error updating book file: $e');
       return false;
+    }
+  }
+
+  // Helper method to generate a proper signed URL for a file path
+  Future<String?> generateSignedUrl(String filePath) async {
+    try {
+      print('BookService: Generating signed URL for: $filePath');
+
+      // Ensure the file path doesn't include the bucket name prefix
+      String cleanPath = filePath;
+      if (filePath.startsWith('books/')) {
+        cleanPath = filePath.substring(6); // Remove 'books/' prefix
+      }
+
+      print('BookService: Clean path for signed URL: $cleanPath');
+
+      final signedUrl = await _supabase.storage
+          .from('books')
+          .createSignedUrl(cleanPath, 3600); // 1 hour expiry
+
+      print('BookService: Generated signed URL: $signedUrl');
+      return signedUrl;
+    } catch (e) {
+      print('BookService: Error generating signed URL: $e');
+      return null;
     }
   }
 }

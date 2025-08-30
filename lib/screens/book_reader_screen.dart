@@ -5,8 +5,281 @@ import 'package:archive/archive.dart';
 import 'package:image/image.dart' as img;
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../models/local_book_model.dart';
+import '../models/book_model.dart';
 import '../services/local_book_service.dart';
+import '../services/book_service.dart';
 import 'package:path/path.dart' as path;
+
+class CloudBookReaderScreen extends StatefulWidget {
+  final BookModel book;
+
+  const CloudBookReaderScreen({super.key, required this.book});
+
+  @override
+  State<CloudBookReaderScreen> createState() => _CloudBookReaderScreenState();
+}
+
+class _CloudBookReaderScreenState extends State<CloudBookReaderScreen> {
+  final Color skyBlue = const Color(0xFF87CEEB);
+  final BookService _bookService = BookService();
+  bool _isLoading = true;
+  String? _errorMessage;
+  String? _bookFileUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeReader();
+  }
+
+  Future<void> _initializeReader() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      // Check if book has a file URL for reading
+      if (widget.book.bookFileUrl == null || widget.book.bookFileUrl!.isEmpty) {
+        // Try to get a signed URL from the service
+        if (widget.book.bookFilePath != null) {
+          final signedUrl = await _bookService.getBookReadUrl(widget.book.id);
+          if (signedUrl != null) {
+            _bookFileUrl = signedUrl;
+            setState(() {
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+
+        setState(() {
+          _errorMessage = 'Book file not available for reading';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      _bookFileUrl = widget.book.bookFileUrl;
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error loading book: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          widget.book.title,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmark_border, color: Colors.grey),
+            onPressed: () {
+              // TODO: Add bookmark functionality
+            },
+          ),
+        ],
+      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+            const SizedBox(height: 16),
+            Text(
+              'Unable to open book',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: skyBlue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Go Back'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_bookFileUrl == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.book_outlined, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'Book file not available',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This book does not have a readable file attached.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Determine file type and show appropriate viewer
+    final fileExtension = _getFileExtension(_bookFileUrl!);
+    return _buildBookViewer(fileExtension);
+  }
+
+  Widget _buildBookViewer(String fileExtension) {
+    switch (fileExtension.toLowerCase()) {
+      case 'pdf':
+        return SfPdfViewer.network(
+          _bookFileUrl!,
+          canShowPaginationDialog: true,
+          canShowScrollHead: true,
+          canShowScrollStatus: true,
+        );
+      case 'epub':
+        // For EPUB files, we'll show a placeholder since SfPdfViewer doesn't support EPUB
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.book_outlined, size: 64, color: skyBlue),
+              const SizedBox(height: 16),
+              Text(
+                'EPUB Reader',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'EPUB support coming soon!',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'File: ${widget.book.title}',
+                style: TextStyle(color: skyBlue, fontSize: 12),
+              ),
+            ],
+          ),
+        );
+      case 'txt':
+        // For text files, we'll show a placeholder
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.text_fields, size: 64, color: skyBlue),
+              const SizedBox(height: 16),
+              Text(
+                'Text Reader',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Text file support coming soon!',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+            ],
+          ),
+        );
+      default:
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.file_present, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'Unsupported Format',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'File format .$fileExtension is not supported yet.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+            ],
+          ),
+        );
+    }
+  }
+
+  String _getFileExtension(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final pathSegments = uri.pathSegments;
+      if (pathSegments.isNotEmpty) {
+        final fileName = pathSegments.last;
+        final dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex != -1 && dotIndex < fileName.length - 1) {
+          return fileName.substring(dotIndex + 1);
+        }
+      }
+    } catch (e) {
+      print('Error parsing URL: $e');
+    }
+    return 'unknown';
+  }
+}
 
 class BookReaderScreen extends StatefulWidget {
   final LocalBookModel book;

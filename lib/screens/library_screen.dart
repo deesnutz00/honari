@@ -7,6 +7,7 @@ import '../models/local_book_model.dart';
 import '../services/book_service.dart';
 import '../services/local_book_service.dart';
 import 'book_reader_screen.dart';
+import 'book_details.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -107,9 +108,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             indicatorColor: skyBlue,
             tabs: const [
-              Tab(text: "Playlists"),
+              Tab(text: "Curated Shelf"),
               Tab(text: "Favorites"),
-              Tab(text: "Local Library"), // Added third tab
+              Tab(text: "Local Library"),
             ],
           ),
         ),
@@ -133,7 +134,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             ),
                           ),
                           icon: const Icon(Icons.add),
-                          label: const Text("Create New Playlist"),
+                          label: const Text("Curate a new Adventure"),
                         ),
                         const SizedBox(height: 20),
                         Text(
@@ -162,11 +163,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                   itemCount: _userBooks.length,
                                   itemBuilder: (context, index) {
                                     final book = _userBooks[index];
-                                    return _buildBookCard(
-                                      book.title,
-                                      book.author,
-                                      book.coverUrl ?? 'assets/book1.jpg',
-                                      book.genre ?? 'General',
+                                    return GestureDetector(
+                                      onTap: () => _navigateToBookDetails(book),
+                                      child: _buildBookCard(
+                                        book.title,
+                                        book.author,
+                                        book.firstPageUrl ??
+                                            book.coverUrl ??
+                                            'assets/book1.jpg',
+                                        book.genre ?? 'General',
+                                      ),
                                     );
                                   },
                                 ),
@@ -209,11 +215,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             itemCount: _favoriteBooks.length,
                             itemBuilder: (context, index) {
                               final book = _favoriteBooks[index];
-                              return _buildBookCard(
-                                book.title,
-                                book.author,
-                                book.coverUrl ?? 'assets/book1.jpg',
-                                book.genre ?? 'General',
+                              return GestureDetector(
+                                onTap: () => _navigateToBookDetails(book),
+                                child: _buildBookCard(
+                                  book.title,
+                                  book.author,
+                                  book.firstPageUrl ??
+                                      book.coverUrl ??
+                                      'assets/book1.jpg',
+                                  book.genre ?? 'General',
+                                ),
                               );
                             },
                           ),
@@ -808,5 +819,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
         ),
       );
     }
+  }
+
+  void _navigateToBookDetails(BookModel book) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => BookDetailsScreen(book: book)),
+    );
   }
 }

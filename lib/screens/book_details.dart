@@ -1,31 +1,15 @@
 import 'package:flutter/material.dart';
+import '../models/book_model.dart';
+import 'book_reader_screen.dart';
 
-class BookDetailPage extends StatelessWidget {
-  final String title;
-  final String author;
-  final String genre;
-  final int pages;
-  final int year;
-  final double rating;
-  final int reviews;
-  final String coverUrl;
+class BookDetailsScreen extends StatelessWidget {
+  final BookModel book;
 
-  const BookDetailPage({
-    super.key,
-    required this.title,
-    required this.author,
-    required this.genre,
-    required this.pages,
-    required this.year,
-    required this.rating,
-    required this.reviews,
-    required this.coverUrl,
-  });
+  const BookDetailsScreen({super.key, required this.book});
 
   @override
   Widget build(BuildContext context) {
     final Color skyBlue = const Color(0xFF87CEEB);
-    final Color sakuraPink = const Color(0xFFFCE4EC);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -36,7 +20,10 @@ class BookDetailPage extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.favorite_border, color: Colors.grey),
+            icon: Icon(
+              book.isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: book.isFavorite ? Colors.red : Colors.grey,
+            ),
             onPressed: () {
               // TODO: Add to favorites functionality
             },
@@ -80,23 +67,27 @@ class BookDetailPage extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    coverUrl,
-                    height: 280,
-                    width: 200,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 280,
-                        width: 200,
-                        decoration: BoxDecoration(
-                          color: skyBlue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(Icons.book, size: 80, color: skyBlue),
-                      );
-                    },
-                  ),
+                  child: (book.firstPageUrl != null)
+                      ? Image.network(
+                          book.firstPageUrl!,
+                          height: 280,
+                          width: 200,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildDefaultCover(skyBlue);
+                          },
+                        )
+                      : book.coverUrl != null
+                          ? Image.network(
+                              book.coverUrl!,
+                              height: 280,
+                              width: 200,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildDefaultCover(skyBlue);
+                              },
+                            )
+                          : _buildDefaultCover(skyBlue),
                 ),
               ),
             ),
@@ -108,7 +99,7 @@ class BookDetailPage extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    title,
+                    book.title,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 24,
@@ -118,7 +109,7 @@ class BookDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "by $author",
+                    "by ${book.author}",
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 16,
@@ -135,50 +126,57 @@ class BookDetailPage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _infoChip("Genre", genre, skyBlue),
-                _infoChip("Pages", "$pages", skyBlue),
-                _infoChip("Year", "$year", skyBlue),
+                _infoChip("Genre", book.genre ?? 'General', skyBlue),
+                _infoChip("Added", _formatDate(book.createdAt), skyBlue),
+                _infoChip(
+                  "Status",
+                  book.isFavorite ? 'Favorited' : 'Available',
+                  skyBlue,
+                ),
               ],
             ),
 
-            const SizedBox(height: 24),
-
-            // Rating Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: sakuraPink.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: sakuraPink.withOpacity(0.5),
-                  width: 1,
+            if (book.description != null) ...[
+              const SizedBox(height: 24),
+              // Description Section
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: skyBlue.withOpacity(
+                    0.3,
+                  ), // Changed from lightSkyBlue to skyBlue
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: skyBlue.withOpacity(
+                      0.5,
+                    ), // Changed from lightSkyBlue to skyBlue
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Description",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: skyBlue,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      book.description!,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 16,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.star,
-                    color: sakuraPink.withOpacity(0.8),
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    "$rating",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: sakuraPink.withOpacity(0.8),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    "($reviews reviews)",
-                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
+            ],
 
             const SizedBox(height: 32),
 
@@ -187,7 +185,24 @@ class BookDetailPage extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO: Add start reading functionality
+                  // Check if book has a file URL for reading
+                  if (book.bookFileUrl == null || book.bookFileUrl!.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Book file not available for reading'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+
+                  // Navigate to the cloud book reader
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CloudBookReaderScreen(book: book),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: skyBlue,
@@ -199,98 +214,9 @@ class BookDetailPage extends StatelessWidget {
                   elevation: 0,
                 ),
                 child: const Text(
-                  "Start Reading",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  'Start Reading',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      // TODO: Add to favorites functionality
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: skyBlue,
-                      side: BorderSide(color: skyBlue),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    icon: const Icon(Icons.favorite_border),
-                    label: const Text(
-                      "Add to List",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      // TODO: Add download functionality
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: sakuraPink.withOpacity(0.8),
-                      side: BorderSide(color: sakuraPink.withOpacity(0.8)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    icon: const Icon(Icons.download),
-                    label: const Text(
-                      "Download",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-
-            // Additional Info Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey[200]!, width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline, color: skyBlue, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "About this book",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    "Discover the world of $title by $author. This $genre novel takes you on a journey through $pages pages of captivating storytelling, first published in $year.",
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
               ),
             ),
           ],
@@ -299,20 +225,32 @@ class BookDetailPage extends StatelessWidget {
     );
   }
 
+  Widget _buildDefaultCover(Color skyBlue) {
+    return Container(
+      height: 280,
+      width: 200,
+      decoration: BoxDecoration(
+        color: skyBlue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Icon(Icons.book, size: 80, color: skyBlue),
+    );
+  }
+
   Widget _infoChip(String label, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
         children: [
           Text(
             label,
             style: TextStyle(
-              color: color.withOpacity(0.8),
+              color: color,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -321,13 +259,31 @@ class BookDetailPage extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: color.withOpacity(0.9),
+              color: Colors.grey[700],
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return '$weeks week${weeks > 1 ? 's' : ''} ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 }

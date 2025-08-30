@@ -4,8 +4,8 @@ import 'upload_screen.dart';
 import 'library_screen.dart';
 import 'social_screen.dart';
 import 'book_details.dart';
-import 'package:honari/widgets/book_card.dart';
 import 'package:honari/widgets/search_overlay.dart';
+import '../models/book_model.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -124,24 +124,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
         try {
           // TODO: Replace with actual book data from database when ready
           // For now, navigate to book details with placeholder data
+          // Create a placeholder BookModel for navigation
+          final placeholderBook = BookModel(
+            id: 'placeholder_${type}_${DateTime.now().millisecondsSinceEpoch}',
+            title: type == "trending"
+                ? "Trending Book"
+                : type == "recommendations"
+                ? "Friend's Pick"
+                : "Recent Book",
+            author: "Author Name",
+            genre: "Genre",
+            userId: 'placeholder_user',
+            createdAt: DateTime.now(),
+            description:
+                "This is a placeholder book for demonstration purposes.",
+            bookFileUrl:
+                "https://example.com/sample.pdf", // Placeholder URL for demo
+          );
+
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => BookDetailPage(
-                title: type == "trending"
-                    ? "Trending Book"
-                    : type == "recommendations"
-                    ? "Friend's Pick"
-                    : "Recent Book",
-                author: "Author Name",
-                genre: "Genre",
-                pages: 300,
-                year: 2024,
-                rating: 4.5,
-                reviews: 100,
-                coverUrl:
-                    "", // Empty string will show placeholder in BookDetailPage
-              ),
+              builder: (_) => BookDetailsScreen(book: placeholderBook),
             ),
           );
         } catch (e) {

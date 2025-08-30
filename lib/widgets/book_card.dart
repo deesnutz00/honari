@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:honari/screens/book_details.dart';
+import 'package:honari/models/book_model.dart';
 
 class BookCard extends StatelessWidget {
   final String title;
@@ -54,20 +55,22 @@ class BookCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        // Create a BookModel for navigation
+        final book = BookModel(
+          id: 'book_${title.hashCode}',
+          title: title,
+          author: author,
+          genre: genre,
+          userId: 'current_user',
+          createdAt: DateTime.now(),
+          coverUrl: coverUrl,
+          bookFileUrl:
+              "https://example.com/sample.pdf", // Placeholder URL for demo
+        );
+
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => BookDetailPage(
-              title: title,
-              author: author,
-              genre: genre,
-              pages: pages,
-              year: year,
-              rating: rating,
-              reviews: reviews,
-              coverUrl: coverUrl,
-            ),
-          ),
+          MaterialPageRoute(builder: (_) => BookDetailsScreen(book: book)),
         );
       },
       child: Container(

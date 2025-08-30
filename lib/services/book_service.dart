@@ -218,4 +218,51 @@ class BookService {
       return [];
     }
   }
+
+  // Get signed URL for reading a book from storage
+  Future<String?> getBookReadUrl(String bookId) async {
+    try {
+      // First get the book to find the file path
+      final response = await _supabase
+          .from('books')
+          .select('book_file_path')
+          .eq('id', bookId)
+          .single();
+
+      if (response['book_file_path'] == null) {
+        return null;
+      }
+
+      final filePath = response['book_file_path'] as String;
+
+      // Get a signed URL for reading the file
+      final signedUrl = await _supabase.storage
+          .from('books')
+          .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+      return signedUrl;
+    } catch (e) {
+      print('Error getting book read URL: $e');
+      return null;
+    }
+  }
+
+  // Update book with file information after upload
+  Future<bool> updateBookFile(
+    String bookId,
+    String filePath,
+    String fileUrl,
+  ) async {
+    try {
+      await _supabase
+          .from('books')
+          .update({'book_file_path': filePath, 'book_file_url': fileUrl})
+          .eq('id', bookId);
+
+      return true;
+    } catch (e) {
+      print('Error updating book file: $e');
+      return false;
+    }
+  }
 }

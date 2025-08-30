@@ -241,18 +241,7 @@ class SearchResultsWidget extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => BookDetailPage(
-              title: book.title,
-              author: book.author,
-              genre: book.genre ?? 'Unknown',
-              pages: 0, // Not available in current model
-              year: book.createdAt.year,
-              rating: 0.0, // Not available in current model
-              reviews: 0, // Not available in current model
-              coverUrl: book.coverUrl ?? '',
-            ),
-          ),
+          MaterialPageRoute(builder: (_) => BookDetailsScreen(book: book)),
         );
       },
       child: Container(

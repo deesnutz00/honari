@@ -78,16 +78,16 @@ class BookDetailsScreen extends StatelessWidget {
                           },
                         )
                       : book.coverUrl != null
-                          ? Image.network(
-                              book.coverUrl!,
-                              height: 280,
-                              width: 200,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return _buildDefaultCover(skyBlue);
-                              },
-                            )
-                          : _buildDefaultCover(skyBlue),
+                      ? Image.network(
+                          book.coverUrl!,
+                          height: 280,
+                          width: 200,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildDefaultCover(skyBlue);
+                          },
+                        )
+                      : _buildDefaultCover(skyBlue),
                 ),
               ),
             ),
@@ -191,6 +191,10 @@ class BookDetailsScreen extends StatelessWidget {
                       SnackBar(
                         content: Text('Book file not available for reading'),
                         backgroundColor: Colors.orange,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     );
                     return;
@@ -272,7 +276,7 @@ class BookDetailsScreen extends StatelessWidget {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays == 0) {
       return 'Today';
     } else if (difference.inDays == 1) {

@@ -127,6 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
+          backgroundColor: Colors.white,
           title: Text(
             'Edit Profile',
             style: TextStyle(color: skyBlue, fontWeight: FontWeight.bold),
@@ -174,9 +175,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       if (newUsername.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Username cannot be empty'),
+                          SnackBar(
+                            content: const Text('Username cannot be empty'),
                             backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         );
                         return;
@@ -196,16 +201,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Navigator.pop(context);
 
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Profile updated successfully'),
+                            SnackBar(
+                              content: const Text(
+                                'Profile updated successfully',
+                              ),
                               backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Failed to update profile'),
+                            SnackBar(
+                              content: const Text('Failed to update profile'),
                               backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           );
                         }
@@ -215,6 +230,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           SnackBar(
                             content: Text('Error updating profile: $e'),
                             backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         );
                       } finally {
@@ -246,6 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         title: Text(
           'Settings',
           style: TextStyle(color: skyBlue, fontWeight: FontWeight.bold),
@@ -262,8 +282,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.pop(context);
                   // TODO: Implement notification settings
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Notification settings coming soon!'),
+                    SnackBar(
+                      content: const Text('Notification settings coming soon!'),
+                      backgroundColor: skyBlue,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   );
                 },
@@ -276,8 +301,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.pop(context);
                   // TODO: Implement privacy settings
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Privacy settings coming soon!'),
+                    SnackBar(
+                      content: const Text('Privacy settings coming soon!'),
+                      backgroundColor: skyBlue,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   );
                 },
@@ -290,8 +320,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.pop(context);
                   // TODO: Implement help screen
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Help & Support coming soon!'),
+                    SnackBar(
+                      content: const Text('Help & Support coming soon!'),
+                      backgroundColor: skyBlue,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   );
                 },
@@ -322,6 +357,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         title: Text(
           'About Honari',
           style: TextStyle(color: skyBlue, fontWeight: FontWeight.bold),
@@ -422,7 +458,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFFCE4EC)),
+                  )
                 : _hasError
                 ? _buildErrorView()
                 : Column(
@@ -449,12 +487,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 24),
 
                       // Profile pic
-                      CircleAvatar(
-                        radius: 48,
-                        backgroundImage: _user?.avatarUrl != null
-                            ? NetworkImage(_user!.avatarUrl!)
-                            : const AssetImage('assets/user.jpg')
-                                  as ImageProvider,
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFFCE4EC),
+                            width: 3,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 48,
+                          backgroundImage: _user?.avatarUrl != null
+                              ? NetworkImage(_user!.avatarUrl!)
+                              : const AssetImage('assets/user.jpg')
+                                    as ImageProvider,
+                        ),
                       ),
                       const SizedBox(height: 12),
 

@@ -6,6 +6,7 @@ import 'upload_screen.dart';
 import 'library_screen.dart';
 import 'social_screen.dart';
 import 'book_details.dart';
+import 'book_reader_screen.dart';
 import 'package:honari/widgets/search_overlay.dart';
 import '../models/book_model.dart';
 import '../models/local_book_model.dart';
@@ -57,13 +58,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // Load trending books (most recent books)
       final allBooks = await _bookService.getAllBooks();
-      _trendingBooks = allBooks.take(5).toList();
+      _trendingBooks = allBooks.take(8).toList();
 
       // Load user's recent books (books they've interacted with recently)
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
         final userBooks = await _bookService.getUserBooks(user.id);
-        _recentBooks = userBooks.take(5).toList();
+        _recentBooks = userBooks.take(8).toList();
 
         // Use the same books as trending but in reverse order for recommendations
         _recommendedBooks = _trendingBooks.reversed.toList();
@@ -130,7 +131,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildHomeScreen() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFCE4EC)),
+      );
     }
 
     return SingleChildScrollView(
@@ -169,12 +172,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildSection(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Text(
         title,
         style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
           color: Color(0xFF87CEEB), // sky blue
         ),
       ),
@@ -254,12 +257,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Error'),
+              backgroundColor: Colors.white,
+              title: Text(
+                'Error',
+                style: TextStyle(color: skyBlue, fontWeight: FontWeight.bold),
+              ),
               content: Text('Failed to open book details: $e'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
+                  child: Text('OK', style: TextStyle(color: skyBlue)),
                 ),
               ],
             ),
@@ -323,8 +330,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildLocalBookCard(LocalBookModel book) {
     return GestureDetector(
       onTap: () {
-        // Navigate to library screen or open local book reader
-        Navigator.pushNamed(context, '/library');
+        // Navigate directly to book reader for local books
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookReaderScreen(
+              book: book,
+              localBookService: _localBookService,
+            ),
+          ),
+        );
       },
       child: Container(
         width: 120, // Reduced width to prevent overflow

@@ -52,16 +52,48 @@ class BookService {
   // Get all books for library
   Future<List<BookModel>> getAllBooks() async {
     try {
+      print('📚 BookService: Getting all books from database');
+
+      // Check authentication status
+      final user = _supabase.auth.currentUser;
+      print('📚 BookService: Current user: ${user?.id ?? "Not authenticated"}');
+
       final response = await _supabase
           .from('books')
           .select()
           .order('created_at', ascending: false);
 
-      return (response as List)
+      print('📚 BookService: Raw response length: ${response.length}');
+
+      if (response.isNotEmpty) {
+        print('📚 BookService: First book sample: ${response.first}');
+      } else {
+        print('📚 BookService: No books found in response');
+        // Try to check if there are any books at all (bypass RLS for debugging)
+        try {
+          final allBooksCheck = await _supabase.rpc('get_all_books_debug');
+          print('📚 BookService: Debug RPC result: $allBooksCheck');
+        } catch (debugError) {
+          print('📚 BookService: Debug RPC failed: $debugError');
+        }
+      }
+
+      final books = (response as List)
           .map((book) => BookModel.fromJson(book))
           .toList();
+
+      print('📚 BookService: Successfully parsed ${books.length} books');
+
+      return books;
     } catch (e) {
-      print('Error getting all books: $e');
+      print('❌ BookService: Error getting all books: $e');
+      print('❌ BookService: Error details: ${e.toString()}');
+
+      // If it's an auth error, try to provide more specific guidance
+      if (e.toString().contains('JWT') || e.toString().contains('auth')) {
+        print('❌ BookService: This appears to be an authentication issue');
+      }
+
       return [];
     }
   }

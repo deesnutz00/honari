@@ -82,10 +82,11 @@ class _LoginScreenState extends State<LoginScreen> {
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight:
-                  MediaQuery.of(context).size.height -
-                  MediaQuery.of(context).padding.top -
-                  MediaQuery.of(context).padding.bottom -
-                  32,
+                  (MediaQuery.of(context).size.height -
+                          MediaQuery.of(context).padding.top -
+                          MediaQuery.of(context).padding.bottom -
+                          32)
+                      .clamp(0, double.infinity),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

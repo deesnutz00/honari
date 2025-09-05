@@ -118,7 +118,9 @@ class _CloudBookReaderScreenState extends State<CloudBookReaderScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFCE4EC)),
+      );
     }
 
     if (_errorMessage != null) {
@@ -1114,7 +1116,7 @@ class _BookReaderScreenState extends State<BookReaderScreen> {
   Widget _buildReaderContent() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+        child: CircularProgressIndicator(color: Color(0xFFFCE4EC)),
       );
     }
 
@@ -1264,7 +1266,7 @@ class _BookReaderScreenState extends State<BookReaderScreen> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: CircularProgressIndicator(color: Colors.white),
+            child: CircularProgressIndicator(color: Color(0xFFFCE4EC)),
           );
         }
 

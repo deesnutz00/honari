@@ -102,23 +102,31 @@ class _LibraryScreenState extends State<LibraryScreen> {
               onPressed: () {},
             ),
           ],
-          bottom: TabBar(
-            labelColor: skyBlue,
-            unselectedLabelColor: Colors.grey,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-            indicatorColor: skyBlue,
-            tabs: const [
-              Tab(text: "Curated Shelf"),
-              Tab(text: "Favorites"),
-              Tab(text: "Local Library"),
-            ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: Container(
+              color: Colors.white,
+              child: TabBar(
+                labelColor: skyBlue,
+                unselectedLabelColor: Colors.grey,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                indicatorColor: skyBlue,
+                tabs: const [
+                  Tab(text: "Curated Shelf"),
+                  Tab(text: "Favorites"),
+                  Tab(text: "Local Library"),
+                ],
+              ),
+            ),
           ),
         ),
         body: TabBarView(
           children: [
             // Playlists Tab
             _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFFCE4EC)),
+                  )
                 : Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -183,7 +191,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
             // Favorites Tab
             _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFFCE4EC)),
+                  )
                 : _favoriteBooks.isEmpty
                 ? Center(
                     child: Text(
@@ -599,7 +609,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Local Book'),
+        backgroundColor: Colors.white,
+        title: Text(
+          'Add Local Book',
+          style: TextStyle(color: skyBlue, fontWeight: FontWeight.bold),
+        ),
         content: const Text(
           'Select a book file from your device storage.\n\n'
           'Supported formats:\n'
@@ -611,14 +625,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: skyBlue)),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
               await _pickAndAddBook();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: skyBlue),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: skyBlue,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Select File'),
           ),
         ],
@@ -641,12 +658,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const AlertDialog(
+          builder: (context) => AlertDialog(
+            backgroundColor: Colors.white,
             content: Row(
               children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 16),
-                Text('Adding book...'),
+                CircularProgressIndicator(color: skyBlue),
+                const SizedBox(width: 16),
+                const Text('Adding book...'),
               ],
             ),
           ),
@@ -667,13 +685,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 '${result.files.first.name} added to local library',
               ),
               backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to add book'),
+            SnackBar(
+              content: const Text('Failed to add book'),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         }
@@ -683,6 +709,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
         SnackBar(
           content: Text('Error picking file: $e'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -692,7 +722,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Book'),
+        backgroundColor: Colors.white,
+        title: Text(
+          'Delete Book',
+          style: TextStyle(color: skyBlue, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           'Are you sure you want to delete "${book.title}" from your local library? '
           'This action cannot be undone.',
@@ -700,7 +734,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: skyBlue)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -713,19 +747,31 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${book.title} removed from local library'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 );
               } else {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to delete book'),
+                  SnackBar(
+                    content: const Text('Failed to delete book'),
                     backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -757,6 +803,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void _showBookOptions(LocalBookModel book) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -766,16 +813,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.book),
-              title: const Text('Open Book'),
+              leading: Icon(Icons.book, color: skyBlue),
+              title: Text('Open Book', style: TextStyle(color: skyBlue)),
               onTap: () {
                 Navigator.pop(context);
                 _openBook(book);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.share),
-              title: const Text('Share'),
+              leading: Icon(Icons.share, color: skyBlue),
+              title: Text('Share', style: TextStyle(color: skyBlue)),
               onTap: () {
                 Navigator.pop(context);
                 // Implement share functionality
@@ -797,9 +844,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   void _shareBook(LocalBookModel book) {
     // TODO: Implement book sharing functionality
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Sharing ${book.title}...')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Sharing ${book.title}...'),
+        backgroundColor: skyBlue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   void _deleteBook(LocalBookModel book) async {
@@ -808,14 +860,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
       setState(() {
         _loadLocalBooks();
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${book.title} deleted')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${book.title} deleted'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error deleting book: $e'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }

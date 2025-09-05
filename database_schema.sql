@@ -12,14 +12,31 @@ SET search_path TO public;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =====================================================
--- 1. AUTHENTICATION TABLES (usually auto-created)
+-- 1. AUTHENTICATION TABLES (auto-created by Supabase)
 -- =====================================================
 
 -- Note: auth.users table is automatically created by Supabase
 -- You don't need to create this manually
 
 -- =====================================================
--- 2. BOOKS TABLE
+-- 2. USER PROFILES TABLE
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  username TEXT UNIQUE,
+  bio TEXT,
+  avatar_url TEXT,
+  books_shared INTEGER DEFAULT 0,
+  favorites_count INTEGER DEFAULT 0,
+  following_count INTEGER DEFAULT 0,
+  followers_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 3. BOOKS TABLE (PUBLIC ACCESS)
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS books (
@@ -37,14 +54,8 @@ CREATE TABLE IF NOT EXISTS books (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Ensure description column exists (for existing tables)
-ALTER TABLE books ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
-ALTER TABLE books ADD COLUMN IF NOT EXISTS first_page_url TEXT;
-ALTER TABLE books ADD COLUMN IF NOT EXISTS book_file_url TEXT;
-ALTER TABLE books ADD COLUMN IF NOT EXISTS book_file_path TEXT;
-
 -- =====================================================
--- 3. USER FAVORITES TABLE
+-- 4. USER FAVORITES TABLE
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS user_favorites (
@@ -53,23 +64,6 @@ CREATE TABLE IF NOT EXISTS user_favorites (
   book_id UUID REFERENCES books(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, book_id)
-);
-
--- =====================================================
--- 4. USER PROFILES TABLE
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS user_profiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  username TEXT UNIQUE,
-  bio TEXT,
-  avatar_url TEXT,
-  books_shared INTEGER DEFAULT 0,
-  favorites_count INTEGER DEFAULT 0,
-  following_count INTEGER DEFAULT 0,
-  followers_count INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- =====================================================
@@ -86,18 +80,20 @@ CREATE TABLE IF NOT EXISTS user_follows (
 );
 
 -- =====================================================
--- 6. POSTS TABLE (for social features)
+-- 6. POSTS TABLE (SOCIAL FEATURES)
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS posts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   book_id UUID REFERENCES books(id) ON DELETE SET NULL,
   content TEXT NOT NULL,
-  post_type TEXT DEFAULT 'review', -- 'review', 'currently_reading', 'finished_reading'
+  post_type TEXT DEFAULT 'review',
   rating INTEGER CHECK (rating >= 1 AND rating <= 5),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  -- Note: Foreign key to user_profiles will be added after ensuring all users have profiles
+  -- CONSTRAINT fk_posts_user_profiles FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE
 );
 
 -- =====================================================
@@ -106,8 +102,8 @@ CREATE TABLE IF NOT EXISTS posts (
 
 CREATE TABLE IF NOT EXISTS post_likes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(post_id, user_id)
 );
@@ -118,26 +114,28 @@ CREATE TABLE IF NOT EXISTS post_likes (
 
 CREATE TABLE IF NOT EXISTS post_comments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- =====================================================
--- 9. NOTIFICATIONS TABLE
+-- 9. READING PROGRESS TABLE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS notifications (
+CREATE TABLE IF NOT EXISTS reading_progress (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  message TEXT NOT NULL,
-  type TEXT DEFAULT 'info', -- 'info', 'like', 'comment', 'follow'
-  is_read BOOLEAN DEFAULT FALSE,
-  related_id UUID, -- ID of related post, book, or user
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
+  current_page INTEGER DEFAULT 1,
+  total_pages INTEGER,
+  progress_percentage DECIMAL(5,2) DEFAULT 0.0,
+  last_read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, book_id)
 );
 
 -- =====================================================
@@ -166,203 +164,177 @@ CREATE TABLE IF NOT EXISTS user_achievements (
 );
 
 -- =====================================================
--- 12. READING PROGRESS TABLE
+-- 12. NOTIFICATIONS TABLE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS reading_progress (
+CREATE TABLE IF NOT EXISTS notifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  current_page INTEGER DEFAULT 1,
-  total_pages INTEGER,
-  progress_percentage DECIMAL(5,2) DEFAULT 0.0,
-  last_read_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(user_id, book_id)
-);
-
--- =====================================================
--- 13. BOOK TAGS TABLE
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS book_tags (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT DEFAULT 'info',
+  is_read BOOLEAN DEFAULT FALSE,
+  related_id UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- =====================================================
--- 14. BOOK TAG RELATIONSHIPS
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS book_tag_relationships (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  tag_id UUID REFERENCES book_tags(id) ON DELETE CASCADE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(book_id, tag_id)
 );
 
 -- =====================================================
 -- INDEXES FOR PERFORMANCE
 -- =====================================================
 
--- Books table indexes
 CREATE INDEX IF NOT EXISTS idx_books_user_id ON books(user_id);
 CREATE INDEX IF NOT EXISTS idx_books_created_at ON books(created_at);
 CREATE INDEX IF NOT EXISTS idx_books_genre ON books(genre);
 CREATE INDEX IF NOT EXISTS idx_books_title_author ON books(title, author);
 
--- User favorites indexes
 CREATE INDEX IF NOT EXISTS idx_user_favorites_user_id ON user_favorites(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_favorites_book_id ON user_favorites(book_id);
 
--- Posts indexes
 CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_posts_book_id ON posts(book_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at);
 
--- Search indexes
 CREATE INDEX IF NOT EXISTS idx_books_search ON books USING gin(to_tsvector('english', title || ' ' || author || ' ' || COALESCE(description, '')));
 
 -- =====================================================
--- 14. ROW LEVEL SECURITY (RLS) POLICIES
+-- ROW LEVEL SECURITY (RLS) POLICIES
 -- =====================================================
 
 -- Enable RLS on all tables
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_favorites ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_follows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_comments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reading_progress ENABLE ROW LEVEL SECURITY;
-ALTER TABLE book_tag_relationships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
--- 15. BOOKS TABLE POLICIES
+-- BOOKS POLICIES (PUBLIC ACCESS)
 -- =====================================================
 
--- Users can insert their own books
-CREATE POLICY "Users can insert their own books" ON books
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- DROP existing policies to avoid conflicts
+DROP POLICY IF EXISTS "All users can view all books" ON books;
+DROP POLICY IF EXISTS "Users can insert their own books" ON books;
+DROP POLICY IF EXISTS "Users can update their own books" ON books;
+DROP POLICY IF EXISTS "Only uploader can delete their own books" ON books;
 
--- Users can view all books
-CREATE POLICY "Users can view all books" ON books
+-- ALL users (including anonymous) can VIEW all books
+CREATE POLICY "All users can view all books" ON books
   FOR SELECT USING (true);
 
--- Users can update their own books
+-- Authenticated users can INSERT their own books
+CREATE POLICY "Users can insert their own books" ON books
+  FOR INSERT WITH CHECK (auth.uid() = user_id AND auth.uid() IS NOT NULL);
+
+-- Users can UPDATE their own books
 CREATE POLICY "Users can update their own books" ON books
   FOR UPDATE USING (auth.uid() = user_id);
 
--- Users can delete their own books
-CREATE POLICY "Users can delete their own books" ON books
+-- ONLY the uploader can DELETE their own books
+CREATE POLICY "Only uploader can delete their own books" ON books
   FOR DELETE USING (auth.uid() = user_id);
 
 -- =====================================================
--- 16. USER FAVORITES POLICIES
+-- USER PROFILES POLICIES
+-- =====================================================
+
+-- Temporarily disable RLS for debugging
+ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
+
+-- Re-enable with proper policies after debugging
+-- CREATE POLICY "All users can view all profiles" ON user_profiles
+--   FOR SELECT USING (true);
+--
+-- CREATE POLICY "Users can update their own profile" ON user_profiles
+--   FOR UPDATE USING (auth.uid() = id);
+--
+-- CREATE POLICY "Users can insert their own profile" ON user_profiles
+--   FOR INSERT WITH CHECK (
+--     auth.uid() = id OR
+--     auth.role() = 'service_role' OR
+--     auth.uid() IS NULL
+--   );
+
+-- =====================================================
+-- USER FAVORITES POLICIES
 -- =====================================================
 
 CREATE POLICY "Users can manage their own favorites" ON user_favorites
   FOR ALL USING (auth.uid() = user_id);
 
 -- =====================================================
--- 17. USER PROFILES POLICIES
+-- USER FOLLOWS POLICIES
 -- =====================================================
 
-CREATE POLICY "Users can view all profiles" ON user_profiles
-  FOR SELECT USING (true);
-
-CREATE POLICY "Users can update their own profile" ON user_profiles
-  FOR UPDATE USING (auth.uid() = id);
-
--- Allow users to insert their own profile OR allow service role for signup trigger
-CREATE POLICY "Users can insert their own profile" ON user_profiles
-  FOR INSERT WITH CHECK (
-    auth.uid() = id OR
-    auth.role() = 'service_role' OR
-    auth.uid() IS NULL  -- Allow during signup when user is not yet authenticated
-  );
-
--- =====================================================
--- 18. POSTS POLICIES
--- =====================================================
-
-CREATE POLICY "Users can view all posts" ON posts
-  FOR SELECT USING (true);
-
-CREATE POLICY "Users can create their own posts" ON posts
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update their own posts" ON posts
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own posts" ON posts
-  FOR DELETE USING (auth.uid() = user_id);
-
--- =====================================================
--- 19. OTHER TABLE POLICIES
--- =====================================================
-
--- User follows
 CREATE POLICY "Users can manage their own follows" ON user_follows
   FOR ALL USING (auth.uid() = follower_id OR auth.uid() = following_id);
 
--- Post likes
+-- =====================================================
+-- POSTS POLICIES
+-- =====================================================
+
+-- Temporarily disable RLS for debugging
+ALTER TABLE posts DISABLE ROW LEVEL SECURITY;
+
+-- Re-enable with proper policies after debugging
+-- CREATE POLICY "All users can view all posts" ON posts
+--   FOR SELECT USING (true);
+--
+-- CREATE POLICY "Users can create their own posts" ON posts
+--   FOR INSERT WITH CHECK (auth.uid() = user_id);
+--
+-- CREATE POLICY "Users can update their own posts" ON posts
+--   FOR UPDATE USING (auth.uid() = user_id);
+--
+-- CREATE POLICY "Users can delete their own posts" ON posts
+--   FOR DELETE USING (auth.uid() = user_id);
+
+-- =====================================================
+-- OTHER TABLE POLICIES
+-- =====================================================
+
 CREATE POLICY "Users can manage their own likes" ON post_likes
   FOR ALL USING (auth.uid() = user_id);
 
--- Post comments
-CREATE POLICY "Users can view all comments" ON post_comments
+CREATE POLICY "All users can view all comments" ON post_comments
   FOR SELECT USING (true);
 
 CREATE POLICY "Users can manage their own comments" ON post_comments
   FOR ALL USING (auth.uid() = user_id);
 
--- Notifications
-CREATE POLICY "Users can view their own notifications" ON notifications
-  FOR ALL USING (auth.uid() = user_id);
-
--- Reading progress
 CREATE POLICY "Users can manage their own reading progress" ON reading_progress
   FOR ALL USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can view their own notifications" ON notifications
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage their own achievements" ON user_achievements
+  FOR ALL USING (auth.uid() = user_id);
+
 -- =====================================================
--- 20. GRANT PERMISSIONS
+-- GRANT PERMISSIONS
 -- =====================================================
 
--- Grant usage on schema
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT USAGE ON SCHEMA public TO anon;
 
--- Grant permissions to authenticated users
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
--- Grant permissions to anonymous users (for signup)
 GRANT SELECT, INSERT ON TABLE user_profiles TO anon;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO anon;
 
--- Grant permissions to service role (for triggers and functions)
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
 -- =====================================================
--- 21. STORAGE BUCKET SETUP
+-- TRIGGERS FOR UPDATED_AT
 -- =====================================================
 
--- Note: You'll need to create these buckets manually in the Storage section
--- or use the Storage API to create them programmatically
-
--- =====================================================
--- 22. TRIGGERS FOR UPDATED_AT
--- =====================================================
-
--- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -371,11 +343,10 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create triggers for updated_at
-CREATE TRIGGER update_books_updated_at BEFORE UPDATE ON books
+CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles
+CREATE TRIGGER update_books_updated_at BEFORE UPDATE ON books
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts
@@ -388,22 +359,9 @@ CREATE TRIGGER update_reading_progress_updated_at BEFORE UPDATE ON reading_progr
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
--- 23. SAMPLE DATA (OPTIONAL)
+-- USER PROFILE CREATION TRIGGER
 -- =====================================================
 
--- Insert some sample achievements
-INSERT INTO achievements (name, description, points) VALUES
-('First Book', 'Upload your first book', 10),
-('Bookworm', 'Upload 10 books', 50),
-('Social Butterfly', 'Get 10 followers', 25),
-('Reviewer', 'Write 5 book reviews', 30)
-ON CONFLICT DO NOTHING;
-
--- =====================================================
--- 24. FINAL SETUP
--- =====================================================
-
--- Create a function to automatically create user profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
@@ -413,46 +371,163 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create trigger for new user signup
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- =====================================================
+-- ENSURE EXISTING USERS HAVE PROFILES
+-- =====================================================
+
+-- Create profiles for any existing users who don't have them
+INSERT INTO public.user_profiles (id, username)
+SELECT
+  au.id,
+  COALESCE(au.raw_user_meta_data->>'name', au.raw_user_meta_data->>'username', 'User')
+FROM auth.users au
+LEFT JOIN public.user_profiles up ON au.id = up.id
+WHERE up.id IS NULL
+ON CONFLICT (id) DO NOTHING;
+
+-- =====================================================
+-- MANUAL PROFILE CREATION (if needed)
+-- =====================================================
+
+-- If user profiles are still missing, run this manually:
+INSERT INTO public.user_profiles (id, username)
+SELECT id, 'User' FROM auth.users
+WHERE id NOT IN (SELECT id FROM public.user_profiles)
+ON CONFLICT (id) DO NOTHING;
+
+-- CREATE TEST POST (if needed for debugging)
+-- Replace 'your-user-id-here' with an actual user ID from auth.users
+-- INSERT INTO posts (user_id, content, post_type)
+-- VALUES ('your-user-id-here', 'Test post from database', 'review');
+
+-- =====================================================
+-- FORCE CREATE USER PROFILES FOR ALL USERS
+-- =====================================================
+
+-- This will ensure ALL users have profiles, even if trigger failed
+DO $$
+DECLARE
+    user_record RECORD;
+BEGIN
+    FOR user_record IN SELECT id FROM auth.users LOOP
+        INSERT INTO public.user_profiles (id, username)
+        VALUES (user_record.id, 'User')
+        ON CONFLICT (id) DO NOTHING;
+    END LOOP;
+END $$;
+
+-- =====================================================
+-- CREATE TEST POST FOR FIRST USER
+-- =====================================================
+
+-- Create a test post for the first user found
+DO $$
+DECLARE
+    first_user_id UUID;
+BEGIN
+    SELECT id INTO first_user_id FROM auth.users LIMIT 1;
+    IF first_user_id IS NOT NULL THEN
+        INSERT INTO posts (user_id, content, post_type)
+        VALUES (first_user_id, 'Welcome to Honari! This is a test post to verify the social features are working.', 'review')
+        ON CONFLICT DO NOTHING;
+    END IF;
+END $$;
+
+-- =====================================================
+-- DEBUG FUNCTION (TEMPORARY)
+-- =====================================================
+
+-- Function to check books without RLS restrictions (for debugging)
+CREATE OR REPLACE FUNCTION public.get_all_books_debug()
+RETURNS TABLE(id UUID, title TEXT, author TEXT, user_id UUID) AS $$
+BEGIN
+  RETURN QUERY SELECT b.id, b.title, b.author, b.user_id FROM books b;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to check user profiles and posts (for debugging)
+CREATE OR REPLACE FUNCTION public.debug_social_data()
+RETURNS TABLE(
+  user_id UUID,
+  username TEXT,
+  posts_count BIGINT,
+  has_profile BOOLEAN
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    au.id as user_id,
+    up.username,
+    COUNT(p.id) as posts_count,
+    CASE WHEN up.id IS NOT NULL THEN true ELSE false END as has_profile
+  FROM auth.users au
+  LEFT JOIN public.user_profiles up ON au.id = up.id
+  LEFT JOIN public.posts p ON au.id = p.user_id
+  GROUP BY au.id, up.username, up.id
+  ORDER BY au.created_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
+-- SAMPLE DATA
+-- =====================================================
+
+-- Insert sample achievements
+INSERT INTO achievements (name, description, points) VALUES
+('First Book', 'Upload your first book', 10),
+('Bookworm', 'Upload 10 books', 50),
+('Social Butterfly', 'Get 10 followers', 25),
+('Reviewer', 'Write 5 book reviews', 30)
+ON CONFLICT DO NOTHING;
+
+-- Sample books cannot be pre-inserted due to foreign key constraints
+-- Users should upload their own books through the app
+-- The RLS policies ensure all uploaded books are visible to all users
+
+-- =====================================================
 -- SCHEMA COMPLETE! 🎉
 -- =====================================================
 
--- IMPORTANT: If you still get permission errors, you may need to run this schema
--- as a database administrator or service role. Alternatively, you can:
--- 1. Go to Supabase Dashboard > SQL Editor
--- 2. Run this schema with proper admin privileges
--- 3. Or ask your database administrator to grant the necessary permissions
-
--- For development/testing, you can temporarily disable RLS on user_profiles:
--- ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
--- (Remember to re-enable it for production!)
-
--- Alternative: If you can't run the full schema, try this minimal setup:
--- 1. Create just the user_profiles table manually in Supabase Dashboard
--- 2. Disable RLS temporarily for testing
--- 3. Re-enable RLS and create proper policies after confirming it works
-
-
-
-
--- IMPORTANT: Storage policies are managed automatically by Supabase
--- Do NOT run storage policy commands in this schema as they require
--- superuser privileges that regular users don't have.
-
--- To set up storage buckets for COVERS TO DISPLAY PROPERLY:
--- 1. Go to Supabase Dashboard > Storage
--- 2. Create a bucket named 'books'
--- 3. Go to bucket settings and make it PUBLIC (allow public access)
--- 4. This allows cover images to be displayed without authentication
--- 5. Book files will still use signed URLs for security
-
--- Alternative: If you don't want public access, you can:
--- 1. Keep bucket private
--- 2. Use signed URLs for covers too (but they expire)
--- 3. Regenerate signed URLs when displaying covers
+-- IMPORTANT NOTES:
+-- 1. All books are PUBLIC - anyone can view them
+-- 2. Only the uploader can DELETE their own books
+-- 3. Users can favorite any public book
+-- 4. Social features work with proper user permissions
+-- 5. Reading progress is private to each user
+--
+-- DEBUG MODE:
+-- - RLS temporarily disabled for posts and user_profiles
+-- - App now uses manual joins to avoid PostgREST relationship issues
+-- - Re-enable RLS after debugging is complete
+--
+-- FOREIGN KEY CONSTRAINTS:
+-- - All foreign keys use CASCADE for user deletions
+-- - Book references use SET NULL to preserve posts when books are deleted
+-- - NOT NULL constraints ensure data integrity
+-- - Use LEFT JOIN in queries when user_profiles might not exist
+--
+-- SAMPLE DATA INCLUDED:
+-- - Achievement system with sample achievements
+-- - Debug function for troubleshooting RLS issues
+-- - No sample books (users must upload their own)
+--
+-- TESTING BOOKS DISPLAY:
+-- 1. Run this schema in Supabase SQL Editor (no errors)
+-- 2. Sign up/Login to create a user account
+-- 3. Upload a book through the Upload screen
+-- 4. Books should appear in dashboard for all users
+-- 5. If issues, check logs for "BookService: Current user"
+-- 6. Debug with: SELECT * FROM get_all_books_debug();
+--
+-- TROUBLESHOOTING:
+-- - Check Supabase authentication status
+-- - Verify RLS policies are correct
+-- - Look for "BookService: Current user" in app logs
+-- - Check user profiles: SELECT * FROM debug_social_data();
+-- - Use debug functions: SELECT * FROM get_all_books_debug();
+-- - Verify posts exist: SELECT * FROM posts LIMIT 5;

@@ -45,6 +45,14 @@ class HonariApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          surfaceTintColor: Colors.white,
+          shadowColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+        ),
       ),
       home: seenOnboarding ? const LoginScreen() : const OnboardingScreen(),
     );

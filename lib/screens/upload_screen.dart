@@ -15,11 +15,14 @@ class UploadScreen extends StatefulWidget {
 class _UploadScreenState extends State<UploadScreen> {
   String? fileName;
   FilePickerResult? pickedFile;
+  String? coverFileName;
+  FilePickerResult? pickedCoverFile;
 
   final TextEditingController titleController = TextEditingController();
   final TextEditingController authorController = TextEditingController();
   final TextEditingController genreController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController coverUrlController = TextEditingController();
 
   final Color skyBlue = const Color(0xFF87CEEB);
   final Color lightSkyBlue = const Color(0xFFE0F0FF);
@@ -55,12 +58,40 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
+  Future<void> pickCoverImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg'],
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          pickedCoverFile = result;
+          coverFileName = result.files.first.name;
+          // Clear the URL field if a file is selected
+          coverUrlController.clear();
+        });
+      }
+    } catch (e) {
+      // Handle any errors that might occur during file picking
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking cover image: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     titleController.dispose();
     authorController.dispose();
     genreController.dispose();
     descriptionController.dispose();
+    coverUrlController.dispose();
     super.dispose();
   }
 
@@ -173,6 +204,113 @@ class _UploadScreenState extends State<UploadScreen> {
               Icons.description_outlined,
               maxLines: 3,
             ),
+            const SizedBox(height: 12),
+            // Cover URL / Image Upload Section
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Book Cover',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: Color(0xFF87CEEB),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: coverUrlController,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFF5F5F5),
+                          prefixIcon: const Icon(
+                            Icons.image_outlined,
+                            color: Colors.grey,
+                          ),
+                          hintText: 'Enter JPG URL or upload file',
+                          hintStyle: const TextStyle(color: Colors.grey),
+                          border: inputBorder,
+                          enabledBorder: inputBorder,
+                          focusedBorder: inputBorder,
+                        ),
+                        onChanged: (value) {
+                          // Clear picked file if user starts typing URL
+                          if (value.isNotEmpty && pickedCoverFile != null) {
+                            setState(() {
+                              pickedCoverFile = null;
+                              coverFileName = null;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: pickCoverImage,
+                      icon: const Icon(Icons.upload_file, size: 18),
+                      label: const Text('JPG'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: skyBlue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (coverFileName != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Cover image selected: $coverFileName',
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              pickedCoverFile = null;
+                              coverFileName = null;
+                            });
+                          },
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: (pickedFile != null && !_isUploading)
@@ -230,12 +368,45 @@ class _UploadScreenState extends State<UploadScreen> {
                         final filePath =
                             uniqueFileName; // This is the path within the bucket
 
-                        // Get public URL for cover (covers should be publicly accessible)
+                        // Handle cover image upload if provided
+                        String? coverImageUrl;
+                        if (pickedCoverFile != null) {
+                          print('📸 Uploading cover image...');
+
+                          final coverPath = pickedCoverFile!.files.first.path;
+                          if (coverPath == null) {
+                            throw Exception('Could not read cover image path');
+                          }
+
+                          final coverFile = File(coverPath);
+                          final coverFileExt =
+                              pickedCoverFile!.files.first.extension ?? 'jpg';
+                          final uniqueCoverFileName =
+                              'cover_${DateTime.now().millisecondsSinceEpoch}.$coverFileExt';
+
+                          print(
+                            '📸 Uploading cover file: $uniqueCoverFileName',
+                          );
+
+                          // Upload cover to 'books' bucket
+                          await Supabase.instance.client.storage
+                              .from('books')
+                              .upload(uniqueCoverFileName, coverFile);
+
+                          // Get public URL for cover image
+                          coverImageUrl = Supabase.instance.client.storage
+                              .from('books')
+                              .getPublicUrl(uniqueCoverFileName);
+
+                          print('🔗 Cover image URL: $coverImageUrl');
+                        }
+
+                        // Get public URL for book file (for fallback cover if no cover image)
                         final publicUrl = Supabase.instance.client.storage
                             .from('books')
                             .getPublicUrl(uniqueFileName);
 
-                        print('🔗 Public URL for cover: $publicUrl');
+                        print('🔗 Public URL for book file: $publicUrl');
 
                         // Generate a signed URL for the book file (for reading)
                         final signedUrl = await Supabase.instance.client.storage
@@ -249,13 +420,21 @@ class _UploadScreenState extends State<UploadScreen> {
 
                         // Create book record in database
                         print('📚 Creating book record in database...');
+
+                        // Determine cover URL priority: uploaded file > user URL > book file public URL
+                        String finalCoverUrl = publicUrl; // Default fallback
+                        if (coverImageUrl != null) {
+                          finalCoverUrl = coverImageUrl;
+                        } else if (coverUrlController.text.isNotEmpty) {
+                          finalCoverUrl = coverUrlController.text;
+                        }
+
                         final bookId = await _bookService.createBook(
                           title: titleController.text,
                           author: authorController.text,
                           description: descriptionController.text,
                           genre: genreController.text,
-                          coverUrl:
-                              publicUrl, // Use public URL for cover display
+                          coverUrl: finalCoverUrl,
                           bookFileUrl: signedUrl, // Use signed URL for reading
                           userId: user.id,
                         );
@@ -285,9 +464,12 @@ class _UploadScreenState extends State<UploadScreen> {
                         authorController.clear();
                         genreController.clear();
                         descriptionController.clear();
+                        coverUrlController.clear();
                         setState(() {
                           pickedFile = null;
                           fileName = null; // properly clear filename
+                          pickedCoverFile = null;
+                          coverFileName = null; // clear cover file
                         });
                       } catch (e) {
                         print('❌ Upload error: $e');

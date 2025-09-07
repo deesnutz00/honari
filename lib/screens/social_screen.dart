@@ -549,7 +549,12 @@ class _SocialScreenState extends State<SocialScreen> {
                         : Icons.favorite_border,
                     size: 20,
                     color: _likedPosts.contains(post['id'].toString())
-                        ? const Color(0xFFFCE4EC) // Sakura pink
+                        ? const Color.fromARGB(
+                            255,
+                            252,
+                            166,
+                            194,
+                          ) // Sakura pink
                         : const Color(0xFF7D7D7D),
                   ),
                 ),
@@ -563,7 +568,12 @@ class _SocialScreenState extends State<SocialScreen> {
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Comments feature coming soon!'),
+                        content: Text(
+                          'Comments feature coming soon!',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        backgroundColor: const Color(0xFF87CEEB),
+
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -584,7 +594,11 @@ class _SocialScreenState extends State<SocialScreen> {
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Share feature coming soon!'),
+                        content: Text(
+                          'Share feature coming soon!',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        backgroundColor: const Color(0xFF87CEEB),
                         duration: Duration(seconds: 2),
                       ),
                     );

@@ -165,9 +165,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                 ),
                               )
                             : SizedBox(
-                                height: 200,
-                                child: ListView.builder(
+                                height: 300,
+                                child: GridView.builder(
                                   scrollDirection: Axis.horizontal,
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 2,
+                                        childAspectRatio: 0.7,
+                                        crossAxisSpacing: 8,
+                                        mainAxisSpacing: 8,
+                                      ),
                                   itemCount: _userBooks.length,
                                   itemBuilder: (context, index) {
                                     final book = _userBooks[index];
@@ -219,9 +226,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         ),
                         const SizedBox(height: 10),
                         SizedBox(
-                          height: 200,
-                          child: ListView.builder(
+                          height: 300,
+                          child: GridView.builder(
                             scrollDirection: Axis.horizontal,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 0.7,
+                                  crossAxisSpacing: 8,
+                                  mainAxisSpacing: 8,
+                                ),
                             itemCount: _favoriteBooks.length,
                             itemBuilder: (context, index) {
                               final book = _favoriteBooks[index];
@@ -351,8 +365,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     String genre,
   ) {
     return Container(
-      width: 140,
-      margin: const EdgeInsets.only(right: 12),
+      margin: const EdgeInsets.all(4),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: lightSkyBlue,

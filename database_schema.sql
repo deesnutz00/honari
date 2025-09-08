@@ -164,7 +164,20 @@ CREATE TABLE IF NOT EXISTS user_achievements (
 );
 
 -- =====================================================
--- 12. NOTIFICATIONS TABLE
+-- 12. QUOTES TABLE
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS quotes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  content TEXT NOT NULL,
+  author TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 13. NOTIFICATIONS TABLE
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS notifications (
@@ -211,6 +224,7 @@ ALTER TABLE post_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reading_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
 -- BOOKS POLICIES (PUBLIC ACCESS)
@@ -316,6 +330,16 @@ CREATE POLICY "Users can manage their own achievements" ON user_achievements
   FOR ALL USING (auth.uid() = user_id);
 
 -- =====================================================
+-- QUOTES POLICIES
+-- =====================================================
+
+CREATE POLICY "All users can view active quotes" ON quotes
+  FOR SELECT USING (is_active = true);
+
+CREATE POLICY "Only authenticated users can manage quotes" ON quotes
+  FOR ALL USING (auth.role() = 'authenticated');
+
+-- =====================================================
 -- GRANT PERMISSIONS
 -- =====================================================
 
@@ -356,6 +380,9 @@ CREATE TRIGGER update_post_comments_updated_at BEFORE UPDATE ON post_comments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_reading_progress_updated_at BEFORE UPDATE ON reading_progress
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_quotes_updated_at BEFORE UPDATE ON quotes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
@@ -485,6 +512,25 @@ INSERT INTO achievements (name, description, points) VALUES
 ('Reviewer', 'Write 5 book reviews', 30)
 ON CONFLICT DO NOTHING;
 
+-- Insert sample quotes
+INSERT INTO quotes (content, author) VALUES
+('The more that you read, the more things you will know. The more that you learn, the more places you''ll go.', 'Dr. Seuss'),
+('A reader lives a thousand lives before he dies. The man who never reads lives only one.', 'George R.R. Martin'),
+('Books are a uniquely portable magic.', 'Stephen King'),
+('Reading is a discount ticket to everywhere.', 'Mary Schmich'),
+('There is no friend as loyal as a book.', 'Ernest Hemingway'),
+('Books are mirrors: you only see in them what you already have inside you.', 'Carlos Ruiz Zafón'),
+('Reading gives us someplace to go when we have to stay where we are.', 'Mason Cooley'),
+('A book is a dream that you hold in your hand.', 'Neil Gaiman'),
+('The world was hers for the reading.', 'Betty Smith'),
+('Reading is an exercise in empathy; an exercise in walking in someone else''s shoes for a while.', 'Malorie Blackman'),
+('Books are the quietest and most constant of friends; they are the most accessible and wisest of counselors, and the most patient of teachers.', 'Charles W. Eliot'),
+('Reading is to the mind what exercise is to the body.', 'Joseph Addison'),
+('A great book should leave you with many experiences, and slightly exhausted at the end. You live several lives while reading.', 'William Styron'),
+('Books serve to show a man that those original thoughts of his aren''t very new after all.', 'Abraham Lincoln'),
+('The reading of all good books is like conversation with the finest men of past centuries.', 'René Descartes')
+ON CONFLICT DO NOTHING;
+
 -- Sample books cannot be pre-inserted due to foreign key constraints
 -- Users should upload their own books through the app
 -- The RLS policies ensure all uploaded books are visible to all users
@@ -499,6 +545,7 @@ ON CONFLICT DO NOTHING;
 -- 3. Users can favorite any public book
 -- 4. Social features work with proper user permissions
 -- 5. Reading progress is private to each user
+-- 6. Quotes are PUBLIC - anyone can view active quotes
 --
 -- DEBUG MODE:
 -- - RLS temporarily disabled for posts and user_profiles
@@ -513,6 +560,7 @@ ON CONFLICT DO NOTHING;
 --
 -- SAMPLE DATA INCLUDED:
 -- - Achievement system with sample achievements
+-- - Quotes system with 15 inspirational book-related quotes
 -- - Debug function for troubleshooting RLS issues
 -- - No sample books (users must upload their own)
 --
@@ -521,8 +569,9 @@ ON CONFLICT DO NOTHING;
 -- 2. Sign up/Login to create a user account
 -- 3. Upload a book through the Upload screen
 -- 4. Books should appear in dashboard for all users
--- 5. If issues, check logs for "BookService: Current user"
--- 6. Debug with: SELECT * FROM get_all_books_debug();
+-- 5. Quotes should appear randomly in the daily quote section
+-- 6. If issues, check logs for "BookService: Current user"
+-- 7. Debug with: SELECT * FROM get_all_books_debug();
 --
 -- TROUBLESHOOTING:
 -- - Check Supabase authentication status
@@ -531,3 +580,4 @@ ON CONFLICT DO NOTHING;
 -- - Check user profiles: SELECT * FROM debug_social_data();
 -- - Use debug functions: SELECT * FROM get_all_books_debug();
 -- - Verify posts exist: SELECT * FROM posts LIMIT 5;
+-- - Check quotes: SELECT * FROM quotes WHERE is_active = true;

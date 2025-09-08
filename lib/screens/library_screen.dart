@@ -69,6 +69,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
   }
 
+  Future<void> _refreshLibrary() async {
+    await _loadBooks();
+    await _loadLocalBooks();
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -120,20 +125,176 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
           ),
         ),
-        body: TabBarView(
-          children: [
-            // Playlists Tab
-            _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Color(0xFFFCE4EC)),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        body: RefreshIndicator(
+          onRefresh: _refreshLibrary,
+          color: skyBlue,
+          backgroundColor: Colors.white,
+          strokeWidth: 3.0,
+          child: TabBarView(
+            children: [
+              // Playlists Tab
+              _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFCE4EC),
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () {},
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: skyBlue,
+                              side: BorderSide(color: skyBlue),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            icon: const Icon(Icons.add),
+                            label: const Text("Curate a new Adventure"),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            "My Books",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            "${_userBooks.length} books",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          const SizedBox(height: 10),
+                          _userBooks.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    "You haven't shared any books yet.",
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                )
+                              : SizedBox(
+                                  height: 300,
+                                  child: GridView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    gridDelegate:
+                                        const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 2,
+                                          childAspectRatio: 0.7,
+                                          crossAxisSpacing: 8,
+                                          mainAxisSpacing: 8,
+                                        ),
+                                    itemCount: _userBooks.length,
+                                    itemBuilder: (context, index) {
+                                      final book = _userBooks[index];
+                                      return GestureDetector(
+                                        onTap: () =>
+                                            _navigateToBookDetails(book),
+                                        child: _buildBookCard(
+                                          book.title,
+                                          book.author,
+                                          book.firstPageUrl ??
+                                              book.coverUrl ??
+                                              'assets/book1.jpg',
+                                          book.genre ?? 'General',
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                        ],
+                      ),
+                    ),
+
+              // Favorites Tab
+              _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFCE4EC),
+                      ),
+                    )
+                  : _favoriteBooks.isEmpty
+                  ? Center(
+                      child: Text(
+                        "Your favorite books will appear here.",
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Favorites",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            "${_favoriteBooks.length} books",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 300,
+                            child: GridView.builder(
+                              scrollDirection: Axis.horizontal,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    childAspectRatio: 0.7,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                  ),
+                              itemCount: _favoriteBooks.length,
+                              itemBuilder: (context, index) {
+                                final book = _favoriteBooks[index];
+                                return GestureDetector(
+                                  onTap: () => _navigateToBookDetails(book),
+                                  child: _buildBookCard(
+                                    book.title,
+                                    book.author,
+                                    book.firstPageUrl ??
+                                        book.coverUrl ??
+                                        'assets/book1.jpg',
+                                    book.genre ?? 'General',
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+              // Local Library Tab - NEW
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with add button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        Text(
+                          "Local Library",
+                          style: TextStyle(
+                            color: skyBlue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                         OutlinedButton.icon(
-                          onPressed: () {},
+                          onPressed: () {
+                            // TODO: Implement file picker for adding local books
+                            _showAddLocalBookDialog(context);
+                          },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: skyBlue,
                             side: BorderSide(color: skyBlue),
@@ -141,218 +302,73 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          icon: const Icon(Icons.add),
-                          label: const Text("Curate a new Adventure"),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          "My Books",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          "${_userBooks.length} books",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 10),
-                        _userBooks.isEmpty
-                            ? Center(
-                                child: Text(
-                                  "You haven't shared any books yet.",
-                                  style: TextStyle(color: Colors.grey[600]),
-                                ),
-                              )
-                            : SizedBox(
-                                height: 300,
-                                child: GridView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 2,
-                                        childAspectRatio: 0.7,
-                                        crossAxisSpacing: 8,
-                                        mainAxisSpacing: 8,
-                                      ),
-                                  itemCount: _userBooks.length,
-                                  itemBuilder: (context, index) {
-                                    final book = _userBooks[index];
-                                    return GestureDetector(
-                                      onTap: () => _navigateToBookDetails(book),
-                                      child: _buildBookCard(
-                                        book.title,
-                                        book.author,
-                                        book.firstPageUrl ??
-                                            book.coverUrl ??
-                                            'assets/book1.jpg',
-                                        book.genre ?? 'General',
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                      ],
-                    ),
-                  ),
-
-            // Favorites Tab
-            _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Color(0xFFFCE4EC)),
-                  )
-                : _favoriteBooks.isEmpty
-                ? Center(
-                    child: Text(
-                      "Your favorite books will appear here.",
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Favorites",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          "${_favoriteBooks.length} books",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 300,
-                          child: GridView.builder(
-                            scrollDirection: Axis.horizontal,
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  childAspectRatio: 0.7,
-                                  crossAxisSpacing: 8,
-                                  mainAxisSpacing: 8,
-                                ),
-                            itemCount: _favoriteBooks.length,
-                            itemBuilder: (context, index) {
-                              final book = _favoriteBooks[index];
-                              return GestureDetector(
-                                onTap: () => _navigateToBookDetails(book),
-                                child: _buildBookCard(
-                                  book.title,
-                                  book.author,
-                                  book.firstPageUrl ??
-                                      book.coverUrl ??
-                                      'assets/book1.jpg',
-                                  book.genre ?? 'General',
-                                ),
-                              );
-                            },
-                          ),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text("Add Book"),
                         ),
                       ],
                     ),
-                  ),
+                    Text(
+                      "${_localBooks.length} local books",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 20),
 
-            // Local Library Tab - NEW
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header with add button
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Local Library",
-                        style: TextStyle(
-                          color: skyBlue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          // TODO: Implement file picker for adding local books
-                          _showAddLocalBookDialog(context);
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: skyBlue,
-                          side: BorderSide(color: skyBlue),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text("Add Book"),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    "${_localBooks.length} local books",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Local books list
-                  _localBooks.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.folder_open,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                "No local books yet",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey[600],
+                    // Local books list
+                    _localBooks.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.folder_open,
+                                  size: 64,
+                                  color: Colors.grey[400],
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Add books from your device to start reading offline",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.grey[500],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: GridView.builder(
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3,
-                                    childAspectRatio: 0.7,
-                                    crossAxisSpacing: 16,
-                                    mainAxisSpacing: 16,
+                                const SizedBox(height: 16),
+                                Text(
+                                  "No local books yet",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey[600],
                                   ),
-                              itemCount: _localBooks.length,
-                              itemBuilder: (context, index) {
-                                final book = _localBooks[index];
-                                return _buildLocalBookGridCard(book);
-                              },
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Add books from your device to start reading offline",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.grey[500],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: GridView.builder(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      childAspectRatio: 0.7,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                    ),
+                                itemCount: _localBooks.length,
+                                itemBuilder: (context, index) {
+                                  final book = _localBooks[index];
+                                  return _buildLocalBookGridCard(book);
+                                },
+                              ),
                             ),
                           ),
-                        ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -697,7 +713,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               content: Text(
                 '${result.files.first.name} added to local library',
               ),
-              backgroundColor: Colors.green,
+              backgroundColor: skyBlue,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -760,7 +776,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${book.title} removed from local library'),
-                    backgroundColor: Colors.green,
+                    backgroundColor: skyBlue,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -876,7 +892,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${book.title} deleted'),
-          backgroundColor: Colors.green,
+          backgroundColor: skyBlue,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -901,6 +917,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => BookDetailsScreen(book: book)),
-    );
+    ).then((_) {
+      // Refresh books when returning from book details
+      // This ensures favorites are updated if user toggled them
+      _loadBooks();
+    });
   }
 }

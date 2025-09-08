@@ -427,6 +427,9 @@ class _SocialScreenState extends State<SocialScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: _loadPosts,
+                      color: skyBlue,
+                      backgroundColor: Colors.white,
+                      strokeWidth: 3.0,
                       child: ListView.builder(
                         padding: const EdgeInsets.all(12),
                         itemCount: _posts.length,
@@ -545,8 +548,8 @@ class _SocialScreenState extends State<SocialScreen> {
                   onTap: () => _toggleLike(post['id'].toString()),
                   child: Icon(
                     _likedPosts.contains(post['id'].toString())
-                        ? Icons.favorite
-                        : Icons.favorite_border,
+                        ? Icons.star
+                        : Icons.star_border,
                     size: 20,
                     color: _likedPosts.contains(post['id'].toString())
                         ? const Color.fromARGB(
@@ -696,7 +699,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
   Future<void> _submitPost() async {
     if (_contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter some content')),
+        const SnackBar(
+          content: Text('Please enter some content'),
+          backgroundColor: Color(0xFF87CEEB),
+        ),
       );
       return;
     }
@@ -705,7 +711,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please log in to create a post')),
+          const SnackBar(
+            content: Text('Please log in to create a post'),
+            backgroundColor: Color(0xFF87CEEB),
+          ),
         );
         return;
       }
@@ -724,7 +733,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
       Navigator.of(context).pop();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Post created successfully!')),
+        const SnackBar(
+          content: Text('Post created successfully!'),
+          backgroundColor: Color(0xFF87CEEB),
+        ),
       );
     } catch (e) {
       print('Error creating post: $e');
@@ -739,16 +751,24 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
             'Post creation failed due to data validation. Please try again.';
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create New Post'),
+      backgroundColor: Colors.white,
+      title: const Text(
+        'Create New Post',
+        style: TextStyle(
+          color: Color(0xFF87CEEB),
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -757,41 +777,73 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
             // Post Type Dropdown
             const Text(
               'Post Type',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF87CEEB),
+              ),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _selectedType,
               items: _postTypes.map((type) {
-                return DropdownMenuItem(value: type, child: Text(type));
+                return DropdownMenuItem(
+                  value: type,
+                  child: Text(
+                    type,
+                    style: const TextStyle(color: Color(0xFF7D7D7D)),
+                  ),
+                );
               }).toList(),
               onChanged: (value) {
                 setState(() {
                   _selectedType = value!;
                 });
               },
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                focusedBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF87CEEB), width: 2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 8,
                 ),
+                labelStyle: const TextStyle(color: Color(0xFF87CEEB)),
               ),
+              dropdownColor: Colors.white,
+              style: const TextStyle(color: Color(0xFF7D7D7D)),
             ),
             const SizedBox(height: 16),
 
             // Content TextField
             const Text(
               'Content',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF87CEEB),
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _contentController,
               maxLines: 4,
-              decoration: const InputDecoration(
+              style: const TextStyle(color: Color(0xFF7D7D7D)),
+              decoration: InputDecoration(
                 hintText: 'Share your thoughts, review, or recommendation...',
-                border: OutlineInputBorder(),
+                hintStyle: const TextStyle(color: Color(0xFF9E9E9E)),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF87CEEB), width: 2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                ),
+                contentPadding: const EdgeInsets.all(12),
               ),
             ),
             const SizedBox(height: 16),
@@ -803,27 +855,60 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                 children: [
                   const Text(
                     'Book (Optional)',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF87CEEB),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _bookSearchController,
-                    decoration: const InputDecoration(
+                    style: const TextStyle(color: Color(0xFF7D7D7D)),
+                    decoration: InputDecoration(
                       hintText: 'Search for a book...',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.search),
+                      hintStyle: const TextStyle(color: Color(0xFF9E9E9E)),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Colors.grey.shade300,
+                          width: 1,
+                        ),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Color(0xFF87CEEB),
+                          width: 2,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Colors.grey.shade300,
+                          width: 1,
+                        ),
+                      ),
+                      suffixIcon: const Icon(
+                        Icons.search,
+                        color: Color(0xFF7D7D7D),
+                      ),
+                      contentPadding: const EdgeInsets.all(12),
                     ),
                     onChanged: _searchBooks,
                   ),
                   const SizedBox(height: 8),
                   if (_isSearching)
-                    const Center(child: CircularProgressIndicator())
+                    const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF87CEEB),
+                      ),
+                    )
                   else if (_searchResults.isNotEmpty)
                     Container(
                       height: 200,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: const Color(0xFF87CEEB).withOpacity(0.3),
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        color: const Color(0xFFF5F5F5),
                       ),
                       child: ListView.builder(
                         itemCount: _searchResults.length,
@@ -866,7 +951,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                       child: Chip(
                         label: Text(
                           '${_selectedBook!.title} by ${_selectedBook!.author}',
+                          style: const TextStyle(color: Colors.white),
                         ),
+                        backgroundColor: const Color(0xFF87CEEB),
+                        deleteIconColor: Colors.white,
                         onDeleted: () {
                           setState(() {
                             _selectedBook = null;
@@ -883,9 +971,22 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: Color(0xFF87CEEB)),
+          ),
         ),
-        ElevatedButton(onPressed: _submitPost, child: const Text('Post')),
+        ElevatedButton(
+          onPressed: _submitPost,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF87CEEB),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('Post'),
+        ),
       ],
     );
   }

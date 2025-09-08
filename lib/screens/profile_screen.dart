@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 import '../services/user_service.dart';
 import '../services/book_service.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -340,6 +341,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _showAboutDialog();
                 },
               ),
+              const Divider(),
+              ListTile(
+                leading: Icon(Icons.logout, color: Colors.red),
+                title: const Text('Sign Out'),
+                subtitle: const Text('Sign out of your account'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showSignOutConfirmation();
+                },
+              ),
             ],
           ),
         ),
@@ -396,6 +407,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  void _showSignOutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text(
+          'Sign Out',
+          style: TextStyle(color: skyBlue, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to sign out? You will need to log in again to access your account.',
+          style: TextStyle(color: Color(0xFF7D7D7D)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: skyBlue)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close confirmation dialog
+              await _signOut();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _signOut() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+
+      if (!mounted) return;
+
+      // Navigate to login screen and clear navigation stack
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (Route<dynamic> route) => false,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Successfully signed out'),
+          backgroundColor: skyBlue,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } catch (e) {
+      print('Error signing out: $e');
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error signing out: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildErrorView() {

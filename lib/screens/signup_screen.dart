@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dashboard_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -48,10 +49,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         // Note: User profile will be created automatically by database trigger
         // The trigger 'on_auth_user_created' will insert into user_profiles table
 
-        showMessage(
-          'Account created! Please check your email for confirmation.',
+        showMessage('Account created successfully!');
+
+        // Navigate to dashboard after successful signup
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
         );
-        Navigator.pop(context); // Go back to login
       } else {
         showMessage('Failed to create account');
       }

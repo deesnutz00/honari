@@ -13,9 +13,21 @@ class BookService {
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
-      return (response as List)
-          .map((book) => BookModel.fromJson(book))
-          .toList();
+      // Get user's favorite book IDs
+      final favoritesResponse = await _supabase
+          .from('user_favorites')
+          .select('book_id')
+          .eq('user_id', userId);
+
+      final favoriteBookIds = (favoritesResponse as List)
+          .map((fav) => fav['book_id'] as String)
+          .toSet();
+
+      return (response as List).map((book) {
+        final bookJson = Map<String, dynamic>.from(book);
+        bookJson['is_favorite'] = favoriteBookIds.contains(bookJson['id']);
+        return BookModel.fromJson(bookJson);
+      }).toList();
     } catch (e) {
       print('Error getting user books: $e');
       return [];
@@ -40,9 +52,11 @@ class BookService {
           .inFilter('id', bookIds)
           .order('created_at', ascending: false);
 
-      return (booksResponse as List)
-          .map((book) => BookModel.fromJson(book))
-          .toList();
+      return (booksResponse as List).map((book) {
+        final bookJson = Map<String, dynamic>.from(book);
+        bookJson['is_favorite'] = true; // These are favorites
+        return BookModel.fromJson(bookJson);
+      }).toList();
     } catch (e) {
       print('Error getting user favorites: $e');
       return [];

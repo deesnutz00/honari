@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart'; // make sure this file exists
+import 'screens/dashboard_screen.dart'; // Add dashboard import
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
@@ -32,12 +33,83 @@ void main() async {
   }
 }
 
-class HonariApp extends StatelessWidget {
+class HonariApp extends StatefulWidget {
   final bool seenOnboarding;
   const HonariApp({super.key, required this.seenOnboarding});
 
   @override
+  State<HonariApp> createState() => _HonariAppState();
+}
+
+class _HonariAppState extends State<HonariApp> {
+  bool _isLoading = true;
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthentication();
+    _setupAuthListener();
+  }
+
+  Future<void> _checkAuthentication() async {
+    try {
+      // Check if user is already authenticated
+      final user = Supabase.instance.client.auth.currentUser;
+      setState(() {
+        _isAuthenticated = user != null;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error checking authentication: $e');
+      setState(() {
+        _isAuthenticated = false;
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _setupAuthListener() {
+    // Listen for authentication state changes
+    Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      final isAuthenticated = event.session != null;
+      if (mounted) {
+        setState(() {
+          _isAuthenticated = isAuthenticated;
+        });
+      }
+    });
+  }
+
+  Widget _getInitialScreen() {
+    // If user hasn't seen onboarding, show onboarding first
+    if (!widget.seenOnboarding) {
+      return const OnboardingScreen();
+    }
+
+    // If user is authenticated, show dashboard
+    if (_isAuthenticated) {
+      return const DashboardScreen();
+    }
+
+    // Otherwise, show login screen
+    return const LoginScreen();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: CircularProgressIndicator(color: Color(0xFF87CEEB)),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       title: 'Honari',
       debugShowCheckedModeBanner: false,
@@ -54,7 +126,7 @@ class HonariApp extends StatelessWidget {
           scrolledUnderElevation: 0,
         ),
       ),
-      home: seenOnboarding ? const LoginScreen() : const OnboardingScreen(),
+      home: _getInitialScreen(),
     );
   }
 }

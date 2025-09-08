@@ -83,7 +83,11 @@ class LocalBookService {
       await file.copy(newFilePath);
 
       // Extract metadata and cover
-      final metadata = await _extractBookMetadata(newFilePath, fileExtension);
+      final metadata = await _extractBookMetadata(
+        newFilePath,
+        fileName,
+        fileExtension,
+      );
       final coverPath = await _extractCover(
         newFilePath,
         fileExtension,
@@ -209,18 +213,19 @@ class LocalBookService {
   // Extract book metadata based on file type
   Future<Map<String, dynamic>> _extractBookMetadata(
     String filePath,
+    String fileName,
     String extension,
   ) async {
     try {
       switch (extension.toLowerCase()) {
         case 'pdf':
-          return await _extractPdfMetadata(filePath);
+          return await _extractPdfMetadata(fileName);
         case 'epub':
-          return await _extractEpubMetadata(filePath);
+          return await _extractEpubMetadata(filePath, fileName);
         case 'cbz':
-          return await _extractCbzMetadata(filePath);
+          return await _extractCbzMetadata(filePath, fileName);
         case 'txt':
-          return await _extractTxtMetadata(filePath);
+          return await _extractTxtMetadata(filePath, fileName);
         default:
           return {};
       }
@@ -231,9 +236,9 @@ class LocalBookService {
   }
 
   // Extract PDF metadata
-  Future<Map<String, dynamic>> _extractPdfMetadata(String filePath) async {
+  Future<Map<String, dynamic>> _extractPdfMetadata(String fileName) async {
     return {
-      'title': _extractTitleFromFileName(filePath.split('/').last),
+      'title': _extractTitleFromFileName(fileName),
       'author': 'Unknown Author',
       'genre': 'Document',
       'totalPages': null,
@@ -241,7 +246,10 @@ class LocalBookService {
   }
 
   // Extract EPUB metadata
-  Future<Map<String, dynamic>> _extractEpubMetadata(String filePath) async {
+  Future<Map<String, dynamic>> _extractEpubMetadata(
+    String filePath,
+    String fileName,
+  ) async {
     try {
       final bytes = await File(filePath).readAsBytes();
       final archive = ZipDecoder().decodeBytes(bytes);
@@ -252,7 +260,7 @@ class LocalBookService {
           containerFile.content as List<int>,
         );
         return {
-          'title': _extractTitleFromFileName(filePath.split('/').last),
+          'title': _extractTitleFromFileName(fileName),
           'author': 'Unknown Author',
           'genre': 'E-Book',
           'totalPages': null,
@@ -263,7 +271,7 @@ class LocalBookService {
     }
 
     return {
-      'title': _extractTitleFromFileName(filePath.split('/').last),
+      'title': _extractTitleFromFileName(fileName),
       'author': 'Unknown Author',
       'genre': 'E-Book',
       'totalPages': null,
@@ -271,7 +279,10 @@ class LocalBookService {
   }
 
   // Extract CBZ metadata
-  Future<Map<String, dynamic>> _extractCbzMetadata(String filePath) async {
+  Future<Map<String, dynamic>> _extractCbzMetadata(
+    String filePath,
+    String fileName,
+  ) async {
     try {
       final bytes = await File(filePath).readAsBytes();
       final archive = ZipDecoder().decodeBytes(bytes);
@@ -289,7 +300,7 @@ class LocalBookService {
       }
 
       return {
-        'title': _extractTitleFromFileName(filePath.split('/').last),
+        'title': _extractTitleFromFileName(fileName),
         'author': 'Unknown Author',
         'genre': 'Comic Book',
         'totalPages': imageCount,
@@ -297,7 +308,7 @@ class LocalBookService {
     } catch (e) {
       print('Error extracting CBZ metadata: $e');
       return {
-        'title': _extractTitleFromFileName(filePath.split('/').last),
+        'title': _extractTitleFromFileName(fileName),
         'author': 'Unknown Author',
         'genre': 'Comic Book',
         'totalPages': null,
@@ -306,14 +317,17 @@ class LocalBookService {
   }
 
   // Extract TXT metadata
-  Future<Map<String, dynamic>> _extractTxtMetadata(String filePath) async {
+  Future<Map<String, dynamic>> _extractTxtMetadata(
+    String filePath,
+    String fileName,
+  ) async {
     try {
       final file = File(filePath);
       final content = await file.readAsString();
       final lines = content.split('\n');
 
       return {
-        'title': _extractTitleFromFileName(filePath.split('/').last),
+        'title': _extractTitleFromFileName(fileName),
         'author': 'Unknown Author',
         'genre': 'Text',
         'totalPages': (content.length / 2000).ceil(),
@@ -321,7 +335,7 @@ class LocalBookService {
     } catch (e) {
       print('Error extracting TXT metadata: $e');
       return {
-        'title': _extractTitleFromFileName(filePath.split('/').last),
+        'title': _extractTitleFromFileName(fileName),
         'author': 'Unknown Author',
         'genre': 'Text',
         'totalPages': null,

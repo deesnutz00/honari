@@ -10,8 +10,10 @@ import 'book_reader_screen.dart';
 import 'package:honari/widgets/search_overlay.dart';
 import '../models/book_model.dart';
 import '../models/local_book_model.dart';
+import '../models/quote_model.dart';
 import '../services/book_service.dart';
 import '../services/local_book_service.dart';
+import '../services/quote_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -31,15 +33,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Database services
   final BookService _bookService = BookService();
   final LocalBookService _localBookService = LocalBookService();
+  final QuoteService _quoteService = QuoteService();
 
   // Book data
   List<BookModel> _trendingBooks = [];
   List<BookModel> _recommendedBooks = [];
   List<BookModel> _recentBooks = [];
   List<LocalBookModel> _localBooks = [];
-  final String _dailyQuote =
-      "Replace this with dynamic quotes from your database when ready.";
-  final String _quoteAuthor = "— Honari";
+  QuoteModel? _currentQuote;
 
   // Remove the _screens list initialization from initState
   // We'll build screens on-demand to prevent memory issues
@@ -58,27 +59,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // Load trending books (most recent books)
       final allBooks = await _bookService.getAllBooks();
-      _trendingBooks = allBooks.take(8).toList();
+      _trendingBooks = allBooks.take(10).toList();
 
       // Load user's recent books (books they've interacted with recently)
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
         final userBooks = await _bookService.getUserBooks(user.id);
-        _recentBooks = userBooks.take(8).toList();
+        _recentBooks = userBooks.take(10).toList();
 
         // Use the same books as trending but in reverse order for recommendations
         _recommendedBooks = _trendingBooks.reversed.toList();
       } else {
         // If no user, show trending books in reverse order as recommendations
         _recommendedBooks = _trendingBooks.reversed.toList();
+
         _recentBooks = [];
       }
 
       // Load local books from device storage
       _localBooks = await _localBookService.getLocalBooks();
 
-      // Load daily quote (for now, keep static, but could be from database)
-      // TODO: Implement dynamic quotes from database
+      // Load daily quote from database
+      _currentQuote = await _quoteService.getRandomQuote();
     } catch (e) {
       print('Error loading dashboard data: $e');
       // Keep empty lists on error
@@ -129,6 +131,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _refreshDashboard() async {
+    await _loadDashboardData();
+  }
+
   Widget _buildHomeScreen() {
     if (_isLoading) {
       return const Center(
@@ -136,36 +142,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(
-        bottom: 24,
-      ), // Remove horizontal padding since ListView has its own
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16), // Add top padding
-          _buildSection("Trending Now"),
-          _buildBookList(_trendingBooks, "trending"),
+    return RefreshIndicator(
+      onRefresh: _refreshDashboard,
+      color: skyBlue,
+      backgroundColor: Colors.white,
+      strokeWidth: 3.0,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(
+          bottom: 24,
+        ), // Remove horizontal padding since ListView has its own
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16), // Add top padding
+            _buildSection("Trending Now"),
+            _buildBookList(_trendingBooks, "trending"),
 
-          const SizedBox(height: 20), // Reduced spacing for compact design
-          _buildSection("Recommendations from Friends"),
-          _buildBookList(_recommendedBooks, "recommendations"),
+            const SizedBox(height: 20), // Reduced spacing for compact design
+            _buildSection("Recommendations from Friends"),
+            _buildBookList(_recommendedBooks, "recommendations"),
 
-          const SizedBox(height: 20), // Reduced spacing for compact design
-          _buildSection("Recently Opened"),
-          _buildBookList(_recentBooks, "recent"),
+            const SizedBox(height: 20), // Reduced spacing for compact design
+            _buildSection("Local Library"),
+            _buildLocalBookList(_localBooks),
 
-          const SizedBox(height: 20), // Reduced spacing for compact design
-          _buildSection("Local Library"),
-          _buildLocalBookList(_localBooks),
+            const SizedBox(height: 20), // Reduced spacing for compact design
+            _buildSection("Recently Opened"),
+            _buildBookList(_recentBooks, "recent"),
 
-          const SizedBox(height: 32),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildDailyQuote(),
-          ),
-          const SizedBox(height: 24),
-        ],
+            const SizedBox(height: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildDailyQuote(),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -443,9 +455,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: sakuraPink.withOpacity(0.2),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: sakuraPink.withOpacity(0.3), width: 1),
+        border: Border.all(color: skyBlue, width: 1),
       ),
       child: Column(
         children: [
@@ -470,7 +482,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            _dailyQuote,
+            _currentQuote?.content ??
+                "The more that you read, the more things you will know. The more that you learn, the more places you'll go.",
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey[600],
@@ -481,7 +494,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            "— Honari",
+            "— ${_currentQuote?.author ?? "Dr. Seuss"}",
             textAlign: TextAlign.center,
             style: TextStyle(
               color: sakuraPink.withOpacity(0.7),

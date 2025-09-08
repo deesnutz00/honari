@@ -1,16 +1,94 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/book_model.dart';
+import '../services/book_service.dart';
 import 'book_reader_screen.dart';
 
-class BookDetailsScreen extends StatelessWidget {
+class BookDetailsScreen extends StatefulWidget {
   final BookModel book;
 
   const BookDetailsScreen({super.key, required this.book});
 
   @override
-  Widget build(BuildContext context) {
-    final Color skyBlue = const Color(0xFF87CEEB);
+  State<BookDetailsScreen> createState() => _BookDetailsScreenState();
+}
 
+class _BookDetailsScreenState extends State<BookDetailsScreen> {
+  final Color skyBlue = const Color(0xFF87CEEB);
+  late bool _isFavorite;
+  final BookService _bookService = BookService();
+
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = widget.book.isFavorite;
+  }
+
+  Future<void> _toggleFavorite() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to manage favorites'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isFavorite = !_isFavorite;
+    });
+
+    bool success;
+    if (_isFavorite) {
+      success = await _bookService.addToFavorites(user.id, widget.book.id);
+    } else {
+      success = await _bookService.removeFromFavorites(user.id, widget.book.id);
+    }
+
+    if (!success) {
+      // Revert the state if the operation failed
+      setState(() {
+        _isFavorite = !_isFavorite;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isFavorite
+                ? 'Failed to add to favorites'
+                : 'Failed to remove from favorites',
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isFavorite ? 'Added to favorites' : 'Removed from favorites',
+          ),
+          backgroundColor: skyBlue,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -21,12 +99,10 @@ class BookDetailsScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(
-              book.isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: book.isFavorite ? Colors.red : Colors.grey,
+              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: _isFavorite ? Colors.red : Colors.grey,
             ),
-            onPressed: () {
-              // TODO: Add to favorites functionality
-            },
+            onPressed: _toggleFavorite,
           ),
           IconButton(
             icon: const Icon(Icons.share, color: Colors.grey),
@@ -67,9 +143,9 @@ class BookDetailsScreen extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: (book.firstPageUrl != null)
+                  child: (widget.book.firstPageUrl != null)
                       ? Image.network(
-                          book.firstPageUrl!,
+                          widget.book.firstPageUrl!,
                           height: 280,
                           width: 200,
                           fit: BoxFit.cover,
@@ -77,9 +153,9 @@ class BookDetailsScreen extends StatelessWidget {
                             return _buildDefaultCover(skyBlue);
                           },
                         )
-                      : book.coverUrl != null
+                      : widget.book.coverUrl != null
                       ? Image.network(
-                          book.coverUrl!,
+                          widget.book.coverUrl!,
                           height: 280,
                           width: 200,
                           fit: BoxFit.cover,
@@ -99,7 +175,7 @@ class BookDetailsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    book.title,
+                    widget.book.title,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 24,
@@ -109,7 +185,7 @@ class BookDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "by ${book.author}",
+                    "by ${widget.book.author}",
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 16,
@@ -126,17 +202,17 @@ class BookDetailsScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _infoChip("Genre", book.genre ?? 'General', skyBlue),
-                _infoChip("Added", _formatDate(book.createdAt), skyBlue),
+                _infoChip("Genre", widget.book.genre ?? 'General', skyBlue),
+                _infoChip("Added", _formatDate(widget.book.createdAt), skyBlue),
                 _infoChip(
                   "Status",
-                  book.isFavorite ? 'Favorited' : 'Available',
+                  _isFavorite ? 'Favorited' : 'Available',
                   skyBlue,
                 ),
               ],
             ),
 
-            if (book.description != null) ...[
+            if (widget.book.description != null) ...[
               const SizedBox(height: 24),
               // Description Section
               Container(
@@ -166,7 +242,7 @@ class BookDetailsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      book.description!,
+                      widget.book.description!,
                       style: TextStyle(
                         color: Colors.grey[700],
                         fontSize: 16,
@@ -186,7 +262,8 @@ class BookDetailsScreen extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () {
                   // Check if book has a file URL for reading
-                  if (book.bookFileUrl == null || book.bookFileUrl!.isEmpty) {
+                  if (widget.book.bookFileUrl == null ||
+                      widget.book.bookFileUrl!.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Book file not available for reading'),
@@ -204,7 +281,8 @@ class BookDetailsScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => CloudBookReaderScreen(book: book),
+                      builder: (context) =>
+                          CloudBookReaderScreen(book: widget.book),
                     ),
                   );
                 },

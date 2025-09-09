@@ -535,8 +535,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const Text(
               'Honari 本',
               style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                fontSize: 26,
                 color: Color(0xFF87CEEB),
               ),
             ),
@@ -606,6 +606,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         onTap: _onItemTapped,
+        selectedIconTheme: const IconThemeData(size: 28),
+        unselectedIconTheme: const IconThemeData(size: 24),
+        selectedLabelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),

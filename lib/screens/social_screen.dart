@@ -330,32 +330,36 @@ class _SocialScreenState extends State<SocialScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Social Feed',
-          style: TextStyle(
-            color: Color(0xFF87CEEB),
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.add_circle_outline,
-              color: Color(0xFF7D7D7D),
-            ),
-            onPressed: () {
-              _showCreatePostDialog(context);
-            },
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: [
+            // Custom header instead of AppBar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: Colors.white,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Social Feed',
+                    style: TextStyle(
+                      color: Color(0xFF87CEEB),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.add_circle_outline,
+                      color: Color(0xFF7D7D7D),
+                    ),
+                    onPressed: () {
+                      _showCreatePostDialog(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
             // Filter Tabs
             Padding(
               padding: const EdgeInsets.all(16.0),

@@ -30,7 +30,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please log in to manage favorites'),
-          backgroundColor: Colors.orange,
+          backgroundColor: const Color.fromARGB(255, 255, 148, 148),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

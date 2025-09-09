@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 
@@ -109,6 +110,38 @@ class UserService {
     } catch (e) {
       print('Error updating user profile: $e');
       return false;
+    }
+  }
+
+  // Upload profile picture to Supabase storage
+  Future<String?> uploadProfilePicture(File imageFile) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return null;
+
+      // Create a unique file name
+      final fileName =
+          '${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      // Upload to Supabase storage
+      await _supabase.storage
+          .from('profile-pictures')
+          .upload(
+            fileName,
+            imageFile,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      // Get the public URL
+      final imageUrl = _supabase.storage
+          .from('profile-pictures')
+          .getPublicUrl(fileName);
+
+      return imageUrl;
+    } catch (e) {
+      print('Error uploading profile picture: $e');
+      return null;
     }
   }
 

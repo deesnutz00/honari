@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 import '../services/user_service.dart';
@@ -24,6 +26,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<Map<String, dynamic>> _achievements = [];
   final UserService _userService = UserService();
   final BookService _bookService = BookService();
+
+  // Image picker
+  final ImagePicker _imagePicker = ImagePicker();
+  File? _selectedImageFile;
+  String? _selectedImageUrl;
 
   @override
   void initState() {
@@ -117,6 +124,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // Pick image from gallery
+  void _pickImageFromGallery() async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImageFile = File(pickedFile.path);
+          _selectedImageUrl = null; // Clear any previously uploaded URL
+        });
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to pick image'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
   void _showEditProfileDialog() {
     if (_user == null) return;
 
@@ -191,13 +229,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       setState(() => isLoading = true);
 
                       try {
+                        String? avatarUrl;
+
+                        // Upload profile picture if selected
+                        if (_selectedImageFile != null) {
+                          avatarUrl = await _userService.uploadProfilePicture(
+                            _selectedImageFile!,
+                          );
+                          if (avatarUrl == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Failed to upload profile picture',
+                                ),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                            setState(() => isLoading = false);
+                            return;
+                          }
+                        }
+
                         final success = await _userService.updateUserProfile(
                           username: newUsername,
                           bio: newBio.isEmpty ? null : newBio,
+                          avatarUrl: avatarUrl,
                         );
 
                         if (success) {
-                          // Reload user data
+                          // Clear selected image and reload user data
+                          setState(() {
+                            _selectedImageFile = null;
+                            _selectedImageUrl = avatarUrl;
+                          });
                           await _loadUserData();
                           Navigator.pop(context);
 
@@ -343,7 +411,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const Divider(),
               ListTile(
-                leading: Icon(Icons.logout, color: Colors.red),
+                leading: Icon(Icons.logout, color: const Color.fromARGB(255, 255, 132, 124)),
                 title: const Text('Sign Out'),
                 subtitle: const Text('Sign out of your account'),
                 onTap: () {
@@ -433,7 +501,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               await _signOut();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: const Color.fromARGB(255, 255, 132, 124),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -574,20 +642,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 24),
 
                       // Profile pic
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFFFCE4EC),
-                            width: 3,
+                      GestureDetector(
+                        onTap: _pickImageFromGallery,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFFCE4EC),
+                              width: 3,
+                            ),
                           ),
-                        ),
-                        child: CircleAvatar(
-                          radius: 48,
-                          backgroundImage: _user?.avatarUrl != null
-                              ? NetworkImage(_user!.avatarUrl!)
-                              : const AssetImage('assets/user.jpg')
-                                    as ImageProvider,
+                          child: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 48,
+                                backgroundImage: _selectedImageFile != null
+                                    ? FileImage(_selectedImageFile!)
+                                    : _user?.avatarUrl != null
+                                    ? NetworkImage(_user!.avatarUrl!)
+                                    : const AssetImage('assets/user.jpg')
+                                          as ImageProvider,
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: skyBlue,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -638,7 +735,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             _buildStatBox(
-                              '${_stats['books_shared'] ?? 0}',
+                              '${_stats['shared'] ?? 0}',
                               'Books\nShared',
                               Icons.menu_book_outlined,
                               color: skyBlue,

@@ -125,7 +125,7 @@ class UserService {
 
       // Upload to Supabase storage
       await _supabase.storage
-          .from('profile-pictures')
+          .from('deesnutz00')
           .upload(
             fileName,
             imageFile,
@@ -135,7 +135,7 @@ class UserService {
 
       // Get the public URL
       final imageUrl = _supabase.storage
-          .from('profile-pictures')
+          .from('deesnutz00')
           .getPublicUrl(fileName);
 
       return imageUrl;

@@ -135,10 +135,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
       if (pickedFile != null) {
-        setState(() {
-          _selectedImageFile = File(pickedFile.path);
-          _selectedImageUrl = null; // Clear any previously uploaded URL
-        });
+        // Show confirmation dialog before setting the image
+        _showImageConfirmationDialog(File(pickedFile.path));
       }
     } catch (e) {
       print('Error picking image: $e');
@@ -153,6 +151,135 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     }
+  }
+
+  // Show confirmation dialog for selected image
+  void _showImageConfirmationDialog(File imageFile) {
+    bool isUploading = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: Colors.white,
+          title: Text(
+            'Confirm Profile Picture',
+            style: TextStyle(color: skyBlue, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: FileImage(imageFile),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Do you want to use this image as your profile picture?',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isUploading ? null : () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(color: skyBlue)),
+            ),
+            ElevatedButton(
+              onPressed: isUploading
+                  ? null
+                  : () async {
+                      setState(() => isUploading = true);
+
+                      try {
+                        // Upload the image immediately
+                        final avatarUrl = await _userService
+                            .uploadProfilePicture(imageFile);
+
+                        if (avatarUrl != null) {
+                          // Update the profile with the new avatar URL
+                          final success = await _userService.updateUserProfile(
+                            avatarUrl: avatarUrl,
+                          );
+
+                          if (success) {
+                            // Update local state and reload user data
+                            setState(() {
+                              _selectedImageFile = null;
+                              _selectedImageUrl = avatarUrl;
+                            });
+                            await _loadUserData();
+
+                            Navigator.pop(context); // Close confirmation dialog
+
+                            // Show success message
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Profile picture updated successfully!',
+                                ),
+                                backgroundColor: skyBlue,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          } else {
+                            throw Exception('Failed to update profile');
+                          }
+                        } else {
+                          throw Exception('Failed to upload image');
+                        }
+                      } catch (e) {
+                        print('Error uploading profile picture: $e');
+                        Navigator.pop(context); // Close confirmation dialog
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Failed to update profile picture: $e',
+                            ),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        );
+                      } finally {
+                        if (mounted) {
+                          setState(() => isUploading = false);
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: skyBlue,
+                foregroundColor: Colors.white,
+              ),
+              child: isUploading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Use This Picture'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showEditProfileDialog() {
@@ -274,7 +401,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               content: const Text(
                                 'Profile updated successfully',
                               ),
-                              backgroundColor: Colors.green,
+                              backgroundColor: skyBlue,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -411,7 +538,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const Divider(),
               ListTile(
-                leading: Icon(Icons.logout, color: const Color.fromARGB(255, 255, 132, 124)),
+                leading: Icon(
+                  Icons.logout,
+                  color: const Color.fromARGB(255, 255, 132, 124),
+                ),
                 title: const Text('Sign Out'),
                 subtitle: const Text('Sign out of your account'),
                 onTap: () {

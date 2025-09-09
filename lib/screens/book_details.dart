@@ -117,7 +117,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
         title: const Text(
           'Book Details',
           style: TextStyle(
-            color: Colors.black87,
+            color: Color(0xFF87CEEB),
             fontWeight: FontWeight.w600,
             fontSize: 18,
           ),
@@ -202,7 +202,6 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _infoChip("Genre", widget.book.genre ?? 'General', skyBlue),
                 _infoChip("Added", _formatDate(widget.book.createdAt), skyBlue),
                 _infoChip(
                   "Status",
@@ -218,16 +217,9 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: skyBlue.withOpacity(
-                    0.3,
-                  ), // Changed from lightSkyBlue to skyBlue
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: skyBlue.withOpacity(
-                      0.5,
-                    ), // Changed from lightSkyBlue to skyBlue
-                    width: 1,
-                  ),
+                  border: Border.all(color: skyBlue, width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,6 +240,37 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
                         fontSize: 16,
                         height: 1.5,
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            if (widget.book.genre != null) ...[
+              const SizedBox(height: 16),
+              // Genre Section
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: skyBlue, width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Genre",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: skyBlue,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.book.genre!,
+                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
                     ),
                   ],
                 ),

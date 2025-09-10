@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/book_model.dart';
 import '../services/book_service.dart';
+import '../services/like_service.dart';
 import 'book_reader_screen.dart';
 
 class BookDetailsScreen extends StatefulWidget {
@@ -16,12 +17,17 @@ class BookDetailsScreen extends StatefulWidget {
 class _BookDetailsScreenState extends State<BookDetailsScreen> {
   final Color skyBlue = const Color(0xFF87CEEB);
   late bool _isFavorite;
+  late bool _isLiked;
+  late int _likeCount;
   final BookService _bookService = BookService();
+  final LikeService _likeService = LikeService();
 
   @override
   void initState() {
     super.initState();
     _isFavorite = widget.book.isFavorite;
+    _isLiked = widget.book.isLiked;
+    _likeCount = widget.book.likeCount;
   }
 
   Future<void> _toggleFavorite() async {
@@ -87,6 +93,62 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
     }
   }
 
+  Future<void> _toggleLike() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please log in to like books'),
+          backgroundColor: const Color.fromARGB(255, 255, 148, 148),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLiked = !_isLiked;
+      _likeCount += _isLiked ? 1 : -1;
+    });
+
+    bool success = await _likeService.toggleLike(widget.book.id, user.id);
+
+    if (!success) {
+      // Revert the state if the operation failed
+      setState(() {
+        _isLiked = !_isLiked;
+        _likeCount += _isLiked ? -1 : 1;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isLiked ? 'Failed to like book' : 'Failed to unlike book',
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isLiked ? 'Book liked!' : 'Book unliked'),
+          backgroundColor: skyBlue,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,6 +165,13 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
               color: _isFavorite ? Colors.red : Colors.grey,
             ),
             onPressed: _toggleFavorite,
+          ),
+          IconButton(
+            icon: Icon(
+              _isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+              color: _isLiked ? skyBlue : Colors.grey,
+            ),
+            onPressed: _toggleLike,
           ),
           IconButton(
             icon: const Icon(Icons.share, color: Colors.grey),
@@ -203,6 +272,7 @@ class _BookDetailsScreenState extends State<BookDetailsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _infoChip("Added", _formatDate(widget.book.createdAt), skyBlue),
+                _infoChip("Likes", _likeCount.toString(), skyBlue),
                 _infoChip(
                   "Status",
                   _isFavorite ? 'Favorited' : 'Available',

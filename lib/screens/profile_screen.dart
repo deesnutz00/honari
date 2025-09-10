@@ -6,6 +6,7 @@ import '../models/user_model.dart';
 import '../services/user_service.dart';
 import '../services/book_service.dart';
 import 'login_screen.dart';
+import 'notifications_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -473,19 +474,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ListTile(
                 leading: Icon(Icons.notifications, color: skyBlue),
                 title: const Text('Notifications'),
-                subtitle: const Text('Manage notification preferences'),
+                subtitle: const Text('View your notifications'),
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Implement notification settings
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Notification settings coming soon!'),
-                      backgroundColor: skyBlue,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return const NotificationsDialog();
+                    },
                   );
                 },
               ),

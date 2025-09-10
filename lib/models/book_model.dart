@@ -11,6 +11,8 @@ class BookModel {
   final String userId;
   final DateTime createdAt;
   final bool isFavorite;
+  final int likeCount;
+  final bool isLiked;
 
   BookModel({
     required this.id,
@@ -25,6 +27,8 @@ class BookModel {
     required this.userId,
     required this.createdAt,
     this.isFavorite = false,
+    this.likeCount = 0,
+    this.isLiked = false,
   });
 
   factory BookModel.fromJson(Map<String, dynamic> json) {
@@ -43,6 +47,8 @@ class BookModel {
         json['created_at'] ?? DateTime.now().toIso8601String(),
       ),
       isFavorite: json['is_favorite'] ?? false,
+      likeCount: json['like_count'] ?? 0,
+      isLiked: json['is_liked'] ?? false,
     );
   }
 
@@ -60,6 +66,8 @@ class BookModel {
       'user_id': userId,
       'created_at': createdAt.toIso8601String(),
       'is_favorite': isFavorite,
+      'like_count': likeCount,
+      'is_liked': isLiked,
     };
   }
 }

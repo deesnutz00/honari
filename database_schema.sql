@@ -113,12 +113,24 @@ CREATE TABLE IF NOT EXISTS post_likes (
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS post_comments (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+   post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+   content TEXT NOT NULL,
+   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 9. BOOK LIKES TABLE
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS book_likes (
+   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+   book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+   UNIQUE(book_id, user_id)
 );
 
 -- =====================================================
@@ -221,6 +233,7 @@ ALTER TABLE user_follows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE post_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE book_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reading_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
@@ -318,10 +331,13 @@ CREATE POLICY "All users can view all comments" ON post_comments
   FOR SELECT USING (true);
 
 CREATE POLICY "Users can manage their own comments" ON post_comments
-  FOR ALL USING (auth.uid() = user_id);
+   FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage their own book likes" ON book_likes
+   FOR ALL USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can manage their own reading progress" ON reading_progress
-  FOR ALL USING (auth.uid() = user_id);
+   FOR ALL USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can view their own notifications" ON notifications
   FOR ALL USING (auth.uid() = user_id);
@@ -377,6 +393,9 @@ CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_post_comments_updated_at BEFORE UPDATE ON post_comments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_book_likes_updated_at BEFORE UPDATE ON book_likes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_reading_progress_updated_at BEFORE UPDATE ON reading_progress

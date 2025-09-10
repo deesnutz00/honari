@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/book_model.dart';
+import '../models/comment_model.dart';
 import '../services/book_service.dart';
+import '../services/comment_service.dart';
 
 class SocialScreen extends StatefulWidget {
   const SocialScreen({super.key});
@@ -17,6 +19,7 @@ class _SocialScreenState extends State<SocialScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = true;
   final BookService _bookService = BookService();
+  final CommentService _commentService = CommentService();
   Set<String> _likedPosts = {}; // Track liked posts by current user
 
   @override
@@ -572,19 +575,7 @@ class _SocialScreenState extends State<SocialScreen> {
                 ),
                 const SizedBox(width: 12),
                 GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Comments feature coming soon!',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        backgroundColor: const Color(0xFF87CEEB),
-
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
+                  onTap: () => _showCommentsDialog(post['id'].toString()),
                   child: const Icon(
                     Icons.chat_bubble_outline,
                     size: 20,
@@ -624,6 +615,21 @@ class _SocialScreenState extends State<SocialScreen> {
     );
   }
 
+  void _showCommentsDialog(String postId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return CommentsDialog(
+          postId: postId,
+          commentService: _commentService,
+          onCommentAdded: () {
+            _loadPosts(); // Refresh posts to update comment count
+          },
+        );
+      },
+    );
+  }
+
   void _showCreatePostDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -636,6 +642,280 @@ class _SocialScreenState extends State<SocialScreen> {
         );
       },
     );
+  }
+}
+
+class CommentsDialog extends StatefulWidget {
+  final String postId;
+  final CommentService commentService;
+  final VoidCallback onCommentAdded;
+
+  const CommentsDialog({
+    super.key,
+    required this.postId,
+    required this.commentService,
+    required this.onCommentAdded,
+  });
+
+  @override
+  State<CommentsDialog> createState() => _CommentsDialogState();
+}
+
+class _CommentsDialogState extends State<CommentsDialog> {
+  final TextEditingController _commentController = TextEditingController();
+  List<CommentModel> _comments = [];
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadComments();
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadComments() async {
+    try {
+      final comments = await widget.commentService.getCommentsForPost(
+        widget.postId,
+      );
+      setState(() {
+        _comments = comments;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading comments: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _submitComment() async {
+    if (_commentController.text.trim().isEmpty) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please log in to comment')),
+        );
+        return;
+      }
+
+      final success = await widget.commentService.addComment(
+        widget.postId,
+        user.id,
+        _commentController.text.trim(),
+      );
+
+      if (success) {
+        _commentController.clear();
+        await _loadComments();
+        widget.onCommentAdded();
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Failed to add comment')));
+      }
+    } catch (e) {
+      print('Error submitting comment: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to add comment')));
+    } finally {
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Color(0xFF87CEEB),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text(
+                    'Comments',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+
+            // Comments List
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF87CEEB),
+                      ),
+                    )
+                  : _comments.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No comments yet',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _comments.length,
+                      itemBuilder: (context, index) {
+                        final comment = _comments[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                backgroundImage: comment.avatarUrl != null
+                                    ? NetworkImage(comment.avatarUrl!)
+                                    : const AssetImage('assets/user.jpg')
+                                          as ImageProvider,
+                                radius: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      comment.username,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      comment.content,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _getTimeAgo(comment.createdAt),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+
+            // Comment Input
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey, width: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _commentController,
+                      decoration: InputDecoration(
+                        hintText: 'Write a comment...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                      ),
+                      maxLines: 3,
+                      minLines: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF87CEEB),
+                            ),
+                          )
+                        : const Icon(Icons.send, color: Color(0xFF87CEEB)),
+                    onPressed: _isSubmitting ? null : _submitComment,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 365) {
+      return '${(difference.inDays / 365).floor()} year(s) ago';
+    } else if (difference.inDays > 30) {
+      return '${(difference.inDays / 30).floor()} month(s) ago';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays} day(s) ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour(s) ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute(s) ago';
+    } else {
+      return 'Just now';
+    }
   }
 }
 

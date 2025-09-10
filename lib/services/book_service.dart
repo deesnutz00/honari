@@ -1,8 +1,10 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/book_model.dart';
+import '../services/like_service.dart';
 
 class BookService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final LikeService _likeService = LikeService();
 
   // Get user's books
   Future<List<BookModel>> getUserBooks(String userId) async {
@@ -92,13 +94,47 @@ class BookService {
         }
       }
 
-      final books = (response as List)
-          .map((book) => BookModel.fromJson(book))
-          .toList();
+      // Get current user for like and favorite status
+      final currentUser = _supabase.auth.currentUser;
+      final userId = currentUser?.id;
 
-      print('📚 BookService: Successfully parsed ${books.length} books');
+      // Get user's favorite book IDs
+      final favoritesResponse = await _supabase
+          .from('user_favorites')
+          .select('book_id')
+          .eq('user_id', userId ?? '');
 
-      return books;
+      final favoriteBookIds = (favoritesResponse as List)
+          .map((fav) => fav['book_id'] as String)
+          .toSet();
+
+      // Get user's liked book IDs
+      List<String> likedBookIds = [];
+      if (userId != null) {
+        likedBookIds = await _likeService.getUserLikedBookIds(userId);
+      }
+
+      // Process books with like and favorite information
+      List<BookModel> booksWithInfo = [];
+      for (var book in (response as List)) {
+        final bookJson = Map<String, dynamic>.from(book);
+        bookJson['is_favorite'] = favoriteBookIds.contains(bookJson['id']);
+
+        // Add like information
+        final likeCount = await _likeService.getLikeCount(bookJson['id']);
+        final isLiked = userId != null && likedBookIds.contains(bookJson['id']);
+
+        bookJson['like_count'] = likeCount;
+        bookJson['is_liked'] = isLiked;
+
+        booksWithInfo.add(BookModel.fromJson(bookJson));
+      }
+
+      print(
+        '📚 BookService: Successfully parsed ${booksWithInfo.length} books',
+      );
+
+      return booksWithInfo;
     } catch (e) {
       print('❌ BookService: Error getting all books: $e');
       print('❌ BookService: Error details: ${e.toString()}');

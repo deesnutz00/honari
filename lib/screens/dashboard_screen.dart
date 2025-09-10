@@ -7,6 +7,7 @@ import 'library_screen.dart';
 import 'social_screen.dart';
 import 'book_details.dart';
 import 'book_reader_screen.dart';
+import 'notifications_dialog.dart';
 import 'package:honari/widgets/search_overlay.dart';
 import '../models/book_model.dart';
 import '../models/local_book_model.dart';
@@ -548,7 +549,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 IconButton(
                   onPressed: () {
-                    // TODO: Implement notifications functionality
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return const NotificationsDialog();
+                      },
+                    );
                   },
                   icon: const Icon(
                     Icons.notifications_none,
